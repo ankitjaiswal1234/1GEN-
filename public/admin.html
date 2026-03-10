@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Platform Management</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 0.95em;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-logout {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-logout:hover {
+            background: #ff5252;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid;
+            transition: all 0.3s ease;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stat-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-card.total {
+            border-left-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        }
+
+        .stat-card.active {
+            border-left-color: #4caf50;
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(56, 142, 60, 0.05) 100%);
+        }
+
+        .stat-card.inactive {
+            border-left-color: #ff9800;
+            background: linear-gradient(135deg, rgba(255, 152, 0, 0.05) 0%, rgba(245, 127, 23, 0.05) 100%);
+        }
+
+        .stat-card.sessions {
+            border-left-color: #2196f3;
+            background: linear-gradient(135deg, rgba(33, 150, 243, 0.05) 0%, rgba(13, 71, 161, 0.05) 100%);
+        }
+
+        .stat-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+
+        .stat-label {
+            color: #999;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .stat-number {
+            font-size: 2.8em;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .stat-change {
+            font-size: 0.85em;
+            color: #4caf50;
+            font-weight: 600;
+        }
+
+        .stat-change.negative {
+            color: #ff6b6b;
+        }
+
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 40px;
+            animation: slideUp 0.6s ease-out 0.2s both;
+        }
+
+        .section h2 {
+            font-size: 1.8em;
+            color: #333;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .section h2::before {
+            content: '';
+            display: inline-block;
+            width: 5px;
+            height: 35px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 3px;
+        }
+
+        .chart-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .chart-box h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 2px solid #e0e0e0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tbody tr {
+            transition: background 0.3s ease;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .country-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .country-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .country-stats {
+            display: flex;
+            gap: 20px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(102, 126, 234, 0.3);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 15px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .filter-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .filter-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+        }
+
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .module-box {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid white;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .module-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .module-title {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .module-stats {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .stat-mini {
+            text-align: center;
+        }
+
+        .stat-mini-label {
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 8px;
+        }
+
+        .stat-mini-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        @media (max-width: 1024px) {
+            .chart-container {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .module-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-number {
+                font-size: 2em;
+            }
+
+            th, td {
+                padding: 10px;
+                font-size: 0.9em;
+            }
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            color: #01579b;
+            border-left: 4px solid #2196f3;
+        }
+
+        .alert-error {
+            background: #ffebee;
+            color: #b71c1c;
+            border-left: 4px solid #ff1744;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📊 Admin Dashboard</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="refreshData()">🔄 Refresh</button>
+                <button class="btn btn-logout" onclick="logout()">🚪 Logout</button>
+            </div>
+        </div>
+
+        <!-- Main Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card total">
+                <div class="stat-icon">👥</div>
+                <div class="stat-label">Total Users</div>
+                <div class="stat-number" id="totalUsers">0</div>
+                <div class="stat-change" id="totalUserChange">● Loading...</div>
+            </div>
+
+            <div class="stat-card active">
+                <div class="stat-icon">✅</div>
+                <div class="stat-label">Active Users</div>
+                <div class="stat-number" id="activeUsers">0</div>
+                <div class="stat-change" id="activeUserPercent">● Computing...</div>
+            </div>
+
+            <div class="stat-card inactive">
+                <div class="stat-icon">❌</div>
+                <div class="stat-label">Inactive Users</div>
+                <div class="stat-number" id="inactiveUsers">0</div>
+                <div class="stat-change" id="inactiveUserPercent">● Computing...</div>
+            </div>
+
+            <div class="stat-card sessions">
+                <div class="stat-icon">⏱️</div>
+                <div class="stat-label">Total Sessions</div>
+                <div class="stat-number" id="totalSessions">0</div>
+                <div class="stat-change" id="avgSessionDuration">● Avg: Computing...</div>
+            </div>
+        </div>
+
+        <!-- User Statistics Module -->
+        <div class="section">
+            <h2>👥 User Statistics Module</h2>
+            <div class="module-grid">
+                <div class="module-box">
+                    <div class="module-title">📈 User Overview</div>
+                    <div class="module-stats">
+                        <div class="stat-mini">
+                            <div class="stat-mini-label">Total Registered</div>
+                            <div class="stat-mini-value" id="mod-total-users">0</div>
+                        </div>
+                        <div class="stat-mini">
+                            <div class="stat-mini-label">This Month</div>
+                            <div class="stat-mini-value" id="mod-month-users">0</div>
+                        </div>
+                        <div class="stat-mini">
+                            <div class="stat-mini-label">This Week</div>
+                            <div class="stat-mini-value" id="mod-week-users">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="module-box">
+                    <div class="module-title">🔥 User Activity</div>
+                    <div class="module-stats">
+                        <div class="stat-mini">
+                            <div class="stat-mini-label">Last 7 Days</div>
+                            <div class="stat-mini-value" id="mod-7days">0</div>
+                        </div>
+                        <div class="stat-mini">
+                            <div class="stat-mini-label">Last 30 Days</div>
+                            <div class="stat-mini-value" id="mod-30days">0</div>
+                        </div>
+                        <div class="stat-mini">
+                            <div class="stat-mini-label">Online Now</div>
+                            <div class="stat-mini-value" id="mod-online">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="module-box">
+                    <div class="module-title">⏱️ Session Metrics</div>
+                    <div class="module-stats">
+                        <div class="stat-mini">
+                            <div class="stat-mini-label">Avg Duration</div>
+                            <div class="stat-mini-value" id="mod-avg-duration">0s</div>
+                        </div>
+                        <div class="stat-mini">
+                            <div class="stat-mini-label">No Sessions</div>
+                            <div class="stat-mini-value" id="mod-no-sessions">0</div>
+                        </div>
+                        <div class="stat-mini">
+                            <div class="stat-mini-label">10+ Sessions</div>
+                            <div class="stat-mini-value" id="mod-10plus">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="chart-container">
+                <div class="chart-box">
+                    <h3>📊 Session Distribution</h3>
+                    <canvas id="sessionChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>📈 User Status Distribution</h3>
+                    <canvas id="userStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Users Module -->
+        <div class="section">
+            <h2>✅ Active Users Module</h2>
+            <div class="filter-controls">
+                <button class="filter-btn active" onclick="filterActiveUsers('all')">All</button>
+                <button class="filter-btn" onclick="filterActiveUsers('7days')">Last 7 Days</button>
+                <button class="filter-btn" onclick="filterActiveUsers('30days')">Last 30 Days</button>
+                <button class="filter-btn" onclick="filterActiveUsers('today')">Today</button>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User Name</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Last Login</th>
+                            <th>Total Sessions</th>
+                            <th>Country</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activeUsersTable">
+                        <tr><td colspan="6" class="loading"><div class="spinner"></div>Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sessions Module -->
+        <div class="section">
+            <h2>⏱️ Sessions Module</h2>
+            <div class="filter-controls">
+                <button class="filter-btn active" onclick="filterSessions('all')">All Sessions</button>
+                <button class="filter-btn" onclick="filterSessions('today')">Today</button>
+                <button class="filter-btn" onclick="filterSessions('week')">This Week</button>
+                <button class="filter-btn" onclick="filterSessions('month')">This Month</button>
+            </div>
+
+            <div class="module-grid" style="margin-bottom: 30px;">
+                <div class="module-box">
+                    <div class="module-title">📊 Session Analytics</div>
+                    <div class="module-stats">
+                        <div class="stat-mini">
+                            <div class="stat-mini-label">Total Sessions</div>
+                            <div class="stat-mini-value" id="session-total">0</div>
+                        </div>
+                        <div class="stat-mini">
+                            <div class="stat-mini-label">Avg Duration</div>
+                            <div class="stat-mini-value" id="session-avg">0m</div>
+                        </div>
+                        <div class="stat-mini">
+                            <div class="stat-mini-label">Users Active</div>
+                            <div class="stat-mini-value" id="session-users">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="module-box">
+                    <div class="module-title">🥇 Top Sessions</div>
+                    <div id="topSessionsList" style="font-size: 0.9em;">
+                        <p style="color: #999;">Loading...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-box" style="width: 100%;">
+                <h3>📈 Session Timeline</h3>
+                <canvas id="sessionTimelineChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Country Module -->
+        <div class="section">
+            <h2>🌍 Country Statistics Module</h2>
+            <div class="filter-controls">
+                <button class="filter-btn active" onclick="filterCountries('all')">All Countries</button>
+                <button class="filter-btn" onclick="filterCountries('active')">Active Users Only</button>
+                <button class="filter-btn" onclick="filterCountries('top10')">Top 10</button>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-box">
+                    <h3>🌐 Users by Country (Top 10)</h3>
+                    <canvas id="countryChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>📊 Country Distribution</h3>
+                    <canvas id="countryPieChart"></canvas>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <h3 style="margin-bottom: 20px; color: #333;">📍 Country Breakdown</h3>
+                <div id="countryList" style="max-height: 600px; overflow-y: auto;">
+                    <p style="color: #999; text-align: center; padding: 20px;">Loading country data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let adminToken = localStorage.getItem('adminToken');
+        let currentData = {};
+        let chartInstances = {};
+
+        // Check authentication
+        if (!adminToken) {
+            window.location.href = '/admin-login.html';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshData();
+            setInterval(refreshData, 30000); // Refresh every 30 seconds
+        });
+
+        // Refresh all data
+        async function refreshData() {
+            try {
+                await Promise.all([
+                    loadUserStats(),
+                    loadCountryStats(),
+                    loadActiveUsers()
+                ]);
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+                showAlert('Error loading data. Please try again.', 'error');
+            }
+        }
+
+        // Load user statistics
+        async function loadUserStats() {
+            try {
+                const response = await fetch('/api/user-stats', {
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load user stats');
+                
+                const data = await response.json();
+                currentData.userStats = data;
+
+                // Update main stats
+                document.getElementById('totalUsers').textContent = data.totalUsers;
+                document.getElementById('activeUsers').textContent = data.activeUsers;
+                document.getElementById('inactiveUsers').textContent = data.inactiveUsers;
+                document.getElementById('totalSessions').textContent = data.totalSessions;
+                
+                document.getElementById('activeUserPercent').textContent = 
+                    `↑ ${data.activeUsers > 0 ? Math.round((data.activeUsers / data.totalUsers) * 100) : 0}% active`;
+                
+                document.getElementById('inactiveUserPercent').textContent = 
+                    `↓ ${data.inactiveUsers > 0 ? Math.round((data.inactiveUsers / data.totalUsers) * 100) : 0}% inactive`;
+                
+                document.getElementById('avgSessionDuration').textContent = 
+                    `● Avg: ${data.averageSessionDuration}s`;
+
+                // Module stats
+                document.getElementById('mod-total-users').textContent = data.totalUsers;
+                document.getElementById('mod-month-users').textContent = 
+                    data.usersWithLastThirtyDays || 0;
+                document.getElementById('mod-7days').textContent = 
+                    data.usersWithLastSevenDays || 0;
+                document.getElementById('mod-30days').textContent = 
+                    data.usersWithLastThirtyDays || 0;
+                document.getElementById('mod-avg-duration').textContent = 
+                    `${data.averageSessionDuration}s`;
+                document.getElementById('mod-no-sessions').textContent = 
+                    data.sessionBreakdown?.noSessions || 0;
+                document.getElementById('mod-10plus').textContent = 
+                    data.sessionBreakdown?.moreThanTenSessions || 0;
+
+                // Session metrics
+                document.getElementById('session-total').textContent = data.totalSessions;
+                document.getElementById('session-avg').textContent = 
+                    `${Math.round(data.averageSessionDuration / 60)}m`;
+                document.getElementById('session-users').textContent = 
+                    data.activeUsers;
+
+                // Update charts
+                updateSessionChart(data);
+                updateUserStatusChart(data);
+                updateSessionBreakdownChart(data);
+                
+            } catch (error) {
+                console.error('Error loading user stats:', error);
+            }
+        }
+
+        // Load country statistics
+        async function loadCountryStats() {
+            try {
+                const response = await fetch('/api/country-stats', {
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load country stats');
+                
+                const data = await response.json();
+                currentData.countryStats = data;
+
+                // Build country list
+                let countryHTML = '';
+                Object.entries(data.countryStats).forEach(([country, stats]) => {
+                    const percentage = ((stats.userCount / data.summary.countriesList.reduce((sum, c) => sum + c.userCount, 0)) * 100).toFixed(1);
+                    countryHTML += `
+                        <div class="country-item">
+                            <div class="country-name">🌍 ${country}</div>
+                            <div class="country-stats">
+                                <span>👥 ${stats.userCount} users</span>
+                                <span>✅ ${stats.activeUsers} active</span>
+                                <span>⏱️ ${stats.totalSessions} sessions</span>
+                                <span>📊 ${percentage}%</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                document.getElementById('countryList').innerHTML = countryHTML;
+
+                // Update charts
+                updateCountryCharts(data);
+                
+            } catch (error) {
+                console.error('Error loading country stats:', error);
+            }
+        }
+
+        // Load active users
+        async function loadActiveUsers() {
+            try {
+                const response = await fetch('/api/admin/users', {
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load users');
+                
+                const users = await response.json();
+                currentData.users = users;
+
+                // Update active users table
+                updateActiveUsersTable(users);
+                
+            } catch (error) {
+                console.error('Error loading active users:', error);
+            }
+        }
+
+        // Update active users table
+        function updateActiveUsersTable(users) {
+            const tbody = document.getElementById('activeUsersTable');
+            let html = '';
+
+            users.slice(0, 10).forEach(user => {
+                const lastLogin = user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never';
+                const status = user.isActive === 1 ? '🟢 Active' : '🔴 Inactive';
+                const sessions = user.loginSessions ? user.loginSessions.length : 0;
+                const country = user.country || 'Unknown';
+
+                html += `
+                    <tr>
+                        <td>${user.name}</td>
+                        <td>${user.email}</td>
+                        <td>${status}</td>
+                        <td>${lastLogin}</td>
+                        <td><strong>${sessions}</strong></td>
+                        <td>${country}</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html || '<tr><td colspan="6" style="text-align: center; color: #999;">No users found</td></tr>';
+        }
+
+        // Update charts
+        function updateSessionChart(data) {
+            const ctx = document.getElementById('sessionChart');
+            if (!ctx) return;
+
+            if (chartInstances.sessionChart) {
+                chartInstances.sessionChart.destroy();
+            }
+
+            chartInstances.sessionChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['No Sessions', '1-5 Sessions', '6-10 Sessions', '10+ Sessions'],
+                    datasets: [{
+                        data: [
+                            data.sessionBreakdown?.noSessions || 0,
+                            data.sessionBreakdown?.oneTofiveSessions || 0,
+                            data.sessionBreakdown?.sixToTenSessions || 0,
+                            data.sessionBreakdown?.moreThanTenSessions || 0
+                        ],
+                        backgroundColor: [
+                            '#ff6b6b',
+                            '#ffa500',
+                            '#4caf50',
+                            '#667eea'
+                        ],
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateUserStatusChart(data) {
+            const ctx = document.getElementById('userStatusChart');
+            if (!ctx) return;
+
+            if (chartInstances.userStatusChart) {
+                chartInstances.userStatusChart.destroy();
+            }
+
+            chartInstances.userStatusChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Active', 'Inactive'],
+                    datasets: [{
+                        data: [data.activeUsers, data.inactiveUsers],
+                        backgroundColor: [
+                            '#4caf50',
+                            '#ff6b6b'
+                        ],
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateSessionBreakdownChart(data) {
+            const ctx = document.getElementById('sessionTimelineChart');
+            if (!ctx) return;
+
+            if (chartInstances.sessionTimeline) {
+                chartInstances.sessionTimeline.destroy();
+            }
+
+            chartInstances.sessionTimeline = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['No Sessions', '1-5', '6-10', '10+'],
+                    datasets: [{
+                        label: 'User Count',
+                        data: [
+                            data.sessionBreakdown?.noSessions || 0,
+                            data.sessionBreakdown?.oneTofiveSessions || 0,
+                            data.sessionBreakdown?.sixToTenSessions || 0,
+                            data.sessionBreakdown?.moreThanTenSessions || 0
+                        ],
+                        backgroundColor: [
+                            '#ff6b6b',
+                            '#ffa500',
+                            '#4caf50',
+                            '#667eea'
+                        ],
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    indexAxis: 'x',
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateCountryCharts(data) {
+            const countryNames = Object.keys(data.countryStats).slice(0, 10);
+            const userCounts = countryNames.map(c => data.countryStats[c].userCount);
+
+            // Bar chart
+            const barCtx = document.getElementById('countryChart');
+            if (barCtx) {
+                if (chartInstances.countryChart) {
+                    chartInstances.countryChart.destroy();
+                }
+
+                chartInstances.countryChart = new Chart(barCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: countryNames,
+                        datasets: [{
+                            label: 'Users',
+                            data: userCounts,
+                            backgroundColor: '#667eea',
+                            borderRadius: 8,
+                            borderSkipped: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Pie chart
+            const pieCtx = document.getElementById('countryPieChart');
+            if (pieCtx) {
+                if (chartInstances.countryPie) {
+                    chartInstances.countryPie.destroy();
+                }
+
+                const colors = [
+                    '#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe',
+                    '#43e97b', '#38f9d7', '#fa709a', '#fee140', '#30b0fe'
+                ];
+
+                chartInstances.countryPie = new Chart(pieCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: countryNames,
+                        datasets: [{
+                            data: userCounts,
+                            backgroundColor: colors.slice(0, countryNames.length),
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Filter functions
+        function filterActiveUsers(type) {
+            // Update filter buttons
+            document.querySelectorAll('[onclick*="filterActiveUsers"]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Filter implementation
+            console.log('Filter active users by:', type);
+        }
+
+        function filterSessions(type) {
+            document.querySelectorAll('[onclick*="filterSessions"]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            console.log('Filter sessions by:', type);
+        }
+
+        function filterCountries(type) {
+            document.querySelectorAll('[onclick*="filterCountries"]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            console.log('Filter countries by:', type);
+        }
+
+        // Logout
+        function logout() {
+            localStorage.removeItem('adminToken');
+            window.location.href = '/admin-login.html';
+        }
+
+        // Show alert
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            document.querySelector('.container').prepend(alertDiv);
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+    </script>
+</body>
+</html>

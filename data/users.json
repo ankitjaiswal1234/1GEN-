@@ -1,0 +1,35 @@
+[
+  {
+    "_id": "1772878774476",
+    "name": "Ankit jaiswal",
+    "email": "peatallen23@gmail.com",
+    "password": "$2a$10$n4L6GzijeaRqC6.QxfmMAelfPQFq5VU6F5IgjRMkAD.wEtVnqmM.C",
+    "interests": [
+      "movie"
+    ],
+    "loginCount": 1,
+    "lastLogin": "2026-03-07T10:21:51.403Z",
+    "loginSessions": [
+      {
+        "timestamp": "2026-03-07T10:21:51.403Z",
+        "ipAddress": "::1",
+        "duration": 0
+      }
+    ],
+    "createdAt": "2026-03-07T10:19:34.477Z",
+    "isActive": true
+  },
+  {
+    "_id": "1772878877038",
+    "name": "Ankit Jaiswal",
+    "email": "peatallen23@gmail.com",
+    "password": "$2a$10$2NA76tMIptTjpljKPagF.uMlZAhHfY4ys9V9kFWOyq9zOD4KksAfa",
+    "interests": [
+      "movie"
+    ],
+    "loginCount": 0,
+    "loginSessions": [],
+    "createdAt": "2026-03-07T10:21:17.038Z",
+    "isActive": true
+  }
+]
