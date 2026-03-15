@@ -60,11 +60,7 @@ Once logged in, you'll have access to:
 - `GET /api/admin/users/:userId` - Get specific user details with session history
 - `POST /api/admin-login` - Login with admin credentials
 
-## Demo Credentials Available
 
-The application includes demo credentials in `admin-login.html`:
-- Email: `PEATALLEN23@GMAIL.COM`
-- Password: `123qweasE@ADMIN`
 
 (These may need to be created or already exist in the database)
 
