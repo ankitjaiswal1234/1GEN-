@@ -1,7 +1,7 @@
 {
   "apps": [
     {
-      "name": "video-platform",
+      "name": "1gen-chat-by-ai",
       "script": "./server.js",
       "instances": "max",
       "exec_mode": "cluster",

@@ -22,14 +22,28 @@
             color: white;
         }
 
+        .main-wrapper {
+            width: 100%;
+            max-width: 1400px;
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 20px;
+            height: 90vh;
+        }
+
         .video-container {
             width: 100%;
-            max-width: 1200px;
             background: rgba(0, 0, 0, 0.3);
             border-radius: 20px;
-            padding: 30px;
+            padding: 20px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(10px);
+            display: none;
+            flex-direction: column;
+        }
+        
+        .video-container.show {
+            display: flex;
         }
 
         .header {
@@ -160,9 +174,9 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 15px 35px;
+            padding: 8px 20px;
             border-radius: 12px;
-            font-size: 1em;
+            font-size: 0.9em;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -253,12 +267,12 @@
         .device-selector {
             background: rgba(102, 126, 234, 0.1);
             border: 2px solid #667eea;
-            padding: 20px;
+            padding: 10px;
             border-radius: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
         }
 
         .device-group {
@@ -277,7 +291,7 @@
             background: rgba(255, 255, 255, 0.1);
             color: white;
             border: 2px solid #667eea;
-            padding: 10px;
+            padding: 5px;
             border-radius: 8px;
             cursor: pointer;
             font-family: inherit;
@@ -417,14 +431,6 @@
             }
         }
 
-        #videoContainer {
-            display: none !important;
-        }
-
-        #videoContainer[style*="display: block"] {
-            display: block !important;
-        }
-
         .permission-modal {
             display: none;
             position: fixed;
@@ -551,13 +557,109 @@
         }
 
         .message-box {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 350px;
+            height: 450px;
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%);
             border: 2px solid #667eea;
             border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            backdrop-filter: blur(20px);
+        }
+        
+        .message-box.show {
+            display: flex;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .chat-toggle-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            z-index: 999;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: none;
+            color: white;
+            transition: transform 0.2s;
+        }
+        
+        .chat-toggle-btn.show {
+            display: flex;
+        }
+
+        .chat-toggle-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .history-column {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
             padding: 20px;
-            margin-top: 30px;
-            margin-bottom: 30px;
-            animation: slideDown 0.5s ease-out;
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .history-header-title {
+            color: #667eea;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .history-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .history-item {
+            background: rgba(102, 126, 234, 0.1);
+            border-left: 3px solid #667eea;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.85em;
+        }
+        
+        .history-item .partner {
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        
+        .history-item .text {
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 4px;
+        }
+        
+        .history-item .time {
+            font-size: 0.8em;
+            color: rgba(255,255,255,0.5);
         }
 
         .message-header {
@@ -581,7 +683,7 @@
         }
 
         .messages-container {
-            height: 250px;
+            flex: 1;
             background: rgba(0, 0, 0, 0.3);
             border-radius: 10px;
             padding: 15px;
@@ -683,6 +785,10 @@
 
 
         @media (max-width: 1024px) {
+            .main-wrapper {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
             .videos-grid {
                 grid-template-columns: 1fr;
             }
@@ -822,17 +928,18 @@
         </div>
     </div>
 
-    <div class="video-container" id="videoContainer" style="display: none; position: relative;">
-        <div class="user-info-overlay" id="userInfoOverlay">
-            <div class="user-info-overlay-label">👤 Connected User</div>
-            <div class="user-info-overlay-name" id="overlayUserName">User Name</div>
-            <div class="user-info-overlay-label" style="margin-top: 10px;">⭐ Interests</div>
-            <div class="user-info-overlay-interests" id="overlayUserInterests">Not specified</div>
-        </div>
-        <div class="header">
-            <h2>🎥 Live Video Call</h2>
-            <div class="status connected">Connected</div>
-        </div>
+    <div id="mainWrapper" class="main-wrapper" style="display: none;">
+        <div class="video-container" id="videoContainer" style="position: relative;">
+            <div class="user-info-overlay" id="userInfoOverlay">
+                <div class="user-info-overlay-label">👤 Connected User</div>
+                <div class="user-info-overlay-name" id="overlayUserName">User Name</div>
+                <div class="user-info-overlay-label" style="margin-top: 10px;">🌎 Country Preference</div>
+                <div class="user-info-overlay-interests" id="overlayUserInterests">Not specified</div>
+            </div>
+            <div class="header">
+                <h2>🎥 Live Video Call</h2>
+                <div class="status connected">Connected</div>
+            </div>
 
         <div class="info-box">
             <div class="info-box-icon">ℹ️</div>
@@ -879,33 +986,6 @@
             </div>
         </div>
 
-        <!-- Message Box Section -->
-        <div class="message-box">
-            <div class="message-header">
-                <div class="message-icon">💬</div>
-                <h3>Chat</h3>
-            </div>
-            
-            <div class="messages-container" id="messagesContainer">
-                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: rgba(255, 255, 255, 0.5); text-align: center;">
-                    <p>No messages yet. Start the conversation! 👋</p>
-                </div>
-            </div>
-
-            <div class="message-input-box">
-                <input 
-                    id="messageInput" 
-                    class="message-input" 
-                    type="text" 
-                    placeholder="Type your message..." 
-                    onkeypress="handleMessageKeyPress(event)"
-                >
-                <button class="message-send-btn" onclick="sendMessage()" id="sendBtn">
-                    📤 Send
-                </button>
-            </div>
-        </div>
-
         <!-- User Info Section -->
         <div class="user-info-container" id="userInfoContainer" style="display: none;">
             <div class="user-info-card">
@@ -918,7 +998,7 @@
                         <span class="info-value" id="userNameDisplay">-</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Interests:</span>
+                        <span class="info-label">Matched Country:</span>
                         <span class="info-value" id="userInterestDisplay">-</span>
                     </div>
                 </div>
@@ -936,6 +1016,46 @@
             <button class="btn-skip" onclick="skip()">⏭️ Skip</button>
         </div>
     </div>
+
+    <div class="history-column">
+        <div class="history-header-title">🕰️ Chat History</div>
+        <div class="history-list" id="historyList">
+            <div style="opacity: 0.5; text-align: center; margin-top: 20px;">No history yet.</div>
+        </div>
+    </div>
+</div>
+
+<button id="chatToggleBtn" class="chat-toggle-btn" onclick="toggleChat()">💬</button>
+
+<!-- Message Box Section -->
+<div class="message-box" id="messageBox">
+    <div class="message-header" style="justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div class="message-icon">💬</div>
+            <h3>Chat</h3>
+        </div>
+        <button onclick="toggleChat()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; padding: 0; box-shadow: none;">✕</button>
+    </div>
+    
+    <div class="messages-container" id="messagesContainer">
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: rgba(255, 255, 255, 0.5); text-align: center;">
+            <p>No messages yet. Start the conversation! 👋</p>
+        </div>
+    </div>
+
+    <div class="message-input-box">
+        <input 
+            id="messageInput" 
+            class="message-input" 
+            type="text" 
+            placeholder="Type your message..." 
+            onkeypress="handleMessageKeyPress(event)"
+        >
+        <button class="message-send-btn" onclick="sendMessage()" id="sendBtn">
+            📤
+        </button>
+    </div>
+</div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -999,11 +1119,13 @@
                     try {
                         console.log("Showing video container...");
                         const modal = document.getElementById('permissionModal');
+                        const mainWrapper = document.getElementById('mainWrapper');
                         const videoContainer = document.getElementById('videoContainer');
                         const myVideo = document.getElementById('myVideo');
                         
                         if (modal) modal.classList.remove('show');
-                        if (videoContainer) videoContainer.style.display = 'block';
+                        if (mainWrapper) mainWrapper.style.display = 'grid';
+                        if (videoContainer) videoContainer.classList.add('show');
                         if (myVideo) {
                             console.log("Setting video source...");
                             myVideo.srcObject = currentStream;
@@ -1017,7 +1139,12 @@
                         if (socket && user) {
                             socket.emit("join", user);
                             console.log("✓ Joined socket");
+                            loadHistory();
                         }
+                        
+                        // Show chat toggle btn
+                        const chatBtn = document.getElementById('chatToggleBtn');
+                        if (chatBtn) chatBtn.style.display = 'flex';
                         
                         // List devices
                         enumerateDevices();
@@ -1378,6 +1505,55 @@
         }
 
         // ===== MESSAGING FUNCTIONS =====
+        function toggleChat() {
+            const box = document.getElementById('messageBox');
+            const btn = document.getElementById('chatToggleBtn');
+            if (box.classList.contains('show')) {
+                box.classList.remove('show');
+                btn.style.display = 'flex';
+            } else {
+                box.classList.add('show');
+                btn.style.display = 'none';
+            }
+        }
+
+        async function loadHistory() {
+            try {
+                const historyList = document.getElementById('historyList');
+                if (!user || !user._id) return;
+                
+                const response = await fetch('/api/history', {
+                    headers: { 'user-id': user._id }
+                });
+                
+                if (response.ok) {
+                    const messages = await response.json();
+                    if (messages && messages.length > 0) {
+                        historyList.innerHTML = '';
+                        messages.forEach(msg => {
+                            const isSender = msg.senderId === user._id;
+                            const partnerName = isSender ? msg.receiverName : msg.senderName;
+                            const prefix = isSender ? 'You: ' : 'Them: ';
+                            
+                            const div = document.createElement('div');
+                            div.className = 'history-item';
+                            const date = new Date(msg.timestamp).toLocaleString();
+                            div.innerHTML = `
+                                <div class="partner">👤 ${partnerName}</div>
+                                <div class="text">${prefix}${msg.text}</div>
+                                <div class="time">${date}</div>
+                            `;
+                            historyList.appendChild(div);
+                        });
+                    } else {
+                        historyList.innerHTML = '<div style="opacity: 0.5; text-align: center; margin-top: 20px;">No history yet.</div>';
+                    }
+                }
+            } catch(error) {
+                console.error('Error loading history:', error);
+            }
+        }
+
         function sendMessage() {
             try {
                 const input = document.getElementById('messageInput');

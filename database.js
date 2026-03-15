@@ -1,7 +1,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-const dbPath = path.join(__dirname, 'data', 'video-platform.db');
+const dbPath = path.join(__dirname, 'data', '1gen-chat-by-ai.db');
 
 // Create database directory if it doesn't exist
 const fs = require('fs');
@@ -28,7 +28,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
 function initializeTables() {
     return new Promise(async (resolve) => {
         let tablesCreated = 0;
-        const totalTables = 6;
+        const totalTables = 7;
         
         // Helper function to mark table creation
         const tableReady = () => {
@@ -140,6 +140,23 @@ function initializeTables() {
             else console.log('✓ User sessions table ready');
             tableReady();
         });
+
+        // Messages table for chat history
+        db.run(`
+            CREATE TABLE IF NOT EXISTS messages (
+                _id TEXT PRIMARY KEY,
+                senderId TEXT NOT NULL,
+                senderName TEXT,
+                receiverId TEXT NOT NULL,
+                receiverName TEXT,
+                text TEXT NOT NULL,
+                timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        `, (err) => {
+            if (err) console.error('Error creating messages table:', err);
+            else console.log('✓ Messages table ready');
+            tableReady();
+        });
     });
 }
 
@@ -158,8 +175,8 @@ async function createDefaultAdmin() {
 
         if (result.count === 0) {
             // Create default admin
-            const adminEmail = 'admin@videochat.com';
-            const adminPassword = 'Admin@123';
+            const adminEmail = 'PEATALLEN23@GMAIL.COM';
+            const adminPassword = '123qweasE@ADMIN';
             const hash = await bcrypt.hash(adminPassword, 10);
             const adminId = 'admin_' + Date.now();
 

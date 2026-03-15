@@ -51,13 +51,13 @@ if (!fs.existsSync(logsDir)) {
 }
 
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-console.log("🚀 VIDEO PLATFORM - SERVER INITIALIZATION")
+console.log("🚀 1GEN CHAT BY AI - SERVER INITIALIZATION")
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 console.log(`📍 Environment: ${NODE_ENV}`)
 console.log(`📍 Port: ${PORT}`)
 console.log(`📍 CORS Origin: ${CORS_ORIGIN}`)
 console.log("✓ SQLite database initialized")
-console.log("✓ Data location: data/video-platform.db")
+console.log("✓ Data location: data/1gen-chat-by-ai.db")
 
 // User registration - Step 1: Send OTP
 app.post("/send-otp", async (req,res)=>{
@@ -268,6 +268,22 @@ res.status(500).json({ message: "Error fetching users" });
 }
 });
 
+// Get chat history for user
+app.get("/api/history", async (req, res) => {
+    try {
+        const userId = req.headers['user-id']; 
+        if (!userId || userId.startsWith('guest-')) return res.status(401).json({message: "Unauthorized or guest"});
+
+        const messages = await database.all(
+            `SELECT * FROM messages WHERE senderId = ? OR receiverId = ? ORDER BY timestamp DESC LIMIT 200`,
+            [userId, userId]
+        );
+        res.json(messages);
+    } catch(err) {
+        res.status(500).json({message: "Error fetching history"});
+    }
+});
+
 // Add admin routes
 const adminRoutes = require("./routes/admin")
 app.use("/api", adminRoutes)
@@ -322,6 +338,40 @@ socket.on("skip",()=>{
 socket.disconnect()
 
 })
+
+socket.on("message", async (data) => {
+    try {
+        const rooms = Array.from(socket.rooms);
+        const room = rooms.find(r => r !== socket.id) || socket.id;
+        
+        // Broadcast to the other user
+        socket.to(room).emit("message", data);
+
+        const senderSession = userSessions[socket.id];
+        let receiverSession = null;
+        
+        // find receiver session
+        for (let key in userSessions) {
+             if (key !== socket.id) {
+                 const otherSocket = io.sockets.sockets.get(key);
+                 if (otherSocket && Array.from(otherSocket.rooms).includes(room)) {
+                     receiverSession = userSessions[key];
+                     break;
+                 }
+             }
+        }
+
+        if (senderSession && receiverSession && senderSession.userId && receiverSession.userId && !senderSession.userId.startsWith('guest-') && !receiverSession.userId.startsWith('guest-')) {
+            const msgId = 'msg_' + Date.now() + Math.random().toString(36).substr(2, 5);
+            await database.run(
+                'INSERT INTO messages (_id, senderId, senderName, receiverId, receiverName, text) VALUES (?, ?, ?, ?, ?, ?)',
+                [msgId, senderSession.userId, data.sender || senderSession.user.name, receiverSession.userId, receiverSession.user.name, data.text]
+            );
+        }
+    } catch(err) {
+        console.error("Message error:", err);
+    }
+});
 
     socket.on("disconnect", async () => {
         if (userSessions[socket.id]) {

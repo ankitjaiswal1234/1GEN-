@@ -65,7 +65,7 @@ const sendOTPEmail = async (email, otp) => {
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>🎥 Video Chat Platform</h1>
+                    <h1>🎥 1GEN CHAT BY AI</h1>
                     <p>Email Verification</p>
                 </div>
                 <div class="content">
@@ -87,7 +87,7 @@ const sendOTPEmail = async (email, otp) => {
                 </div>
                 <div class="footer">
                     <p><strong>Security Notice:</strong> Never share your OTP with anyone. We will never ask for it.</p>
-                    <p>&copy; 2026 Video Chat Platform. All rights reserved.</p>
+                    <p>&copy; 2026 1GEN CHAT BY AI. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -95,7 +95,7 @@ const sendOTPEmail = async (email, otp) => {
     `;
 
     const textContent = `
-    🎥 Video Chat Platform - Email Verification
+    🎥 1GEN CHAT BY AI - Email Verification
 
     Verify Your Email Address
 
@@ -107,10 +107,10 @@ const sendOTPEmail = async (email, otp) => {
 
     Security Notice: Never share your OTP with anyone. We will never ask for it.
 
-    © 2026 Video Chat Platform. All rights reserved.
+    © 2026 1GEN CHAT BY AI. All rights reserved.
     `;
 
-    return sendEmail(email, '🔐 Verify Your Email - Video Chat Platform', htmlContent, textContent);
+    return sendEmail(email, '🔐 Verify Your Email - 1GEN CHAT BY AI', htmlContent, textContent);
 };
 
 // Send Welcome Email
@@ -131,7 +131,7 @@ const sendWelcomeEmail = async (email, name) => {
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>🎥 Video Chat Platform</h1>
+                    <h1>🎥 1GEN CHAT BY AI</h1>
                     <p>Welcome!</p>
                 </div>
                 <div class="content">
@@ -156,7 +156,7 @@ const sendWelcomeEmail = async (email, name) => {
                 </div>
                 <div class="footer">
                     <p>If you have any questions, feel free to reach out to our support team.</p>
-                    <p>&copy; 2026 Video Chat Platform. All rights reserved.</p>
+                    <p>&copy; 2026 1GEN CHAT BY AI. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -164,7 +164,7 @@ const sendWelcomeEmail = async (email, name) => {
     `;
 
     const textContent = `
-    🎥 Video Chat Platform - Welcome
+    🎥 1GEN CHAT BY AI - Welcome
 
     Welcome, ${name}! 🎉
 
@@ -172,10 +172,10 @@ const sendWelcomeEmail = async (email, name) => {
 
     Visit: http://localhost:3000/login.html
 
-    © 2026 Video Chat Platform. All rights reserved.
+    © 2026 1GEN CHAT BY AI. All rights reserved.
     `;
 
-    return sendEmail(email, '🎉 Welcome to Video Chat Platform!', htmlContent, textContent);
+    return sendEmail(email, '🎉 Welcome to 1GEN CHAT BY AI!', htmlContent, textContent);
 };
 
 module.exports = {
