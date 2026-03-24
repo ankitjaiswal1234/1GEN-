@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: 1gen-chat-by-ai
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_JWT_SECRET
+        generateValue: true
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: EMAIL_SERVICE
+        value: gmail
+      - key: FEATURE_EMAIL_VERIFICATION
+        value: "true"
+      - key: CORS_ORIGIN
+        value: "*"

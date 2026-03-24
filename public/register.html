@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -63,7 +64,8 @@
             font-size: 1em;
         }
 
-        input, select {
+        input,
+        select {
             width: 100%;
             padding: 14px 16px;
             border: 2px solid #e0e0e0;
@@ -74,18 +76,21 @@
             background: #f8f9fa;
         }
 
-        input:focus, select:focus {
+        input:focus,
+        select:focus {
             outline: none;
             background: white;
             border-color: #667eea;
             box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
         }
 
-        input::placeholder, option {
+        input::placeholder,
+        option {
             color: #999;
         }
 
-        input:hover, select:hover {
+        input:hover,
+        select:hover {
             border-color: #764ba2;
         }
 
@@ -231,6 +236,7 @@
                 opacity: 0;
                 transform: translateY(30px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -242,6 +248,7 @@
                 opacity: 0;
                 transform: translateY(-10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -257,12 +264,15 @@
                 font-size: 2em;
             }
 
-            input, select {
+            input,
+            select {
                 padding: 12px 14px;
                 font-size: 16px;
             }
 
-            .register-btn, .verify-btn, .resend-btn {
+            .register-btn,
+            .verify-btn,
+            .resend-btn {
                 padding: 12px;
                 font-size: 1em;
             }
@@ -528,6 +538,7 @@
     </style>
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
+
 <body>
     <div class="register-container">
         <div class="header">
@@ -542,32 +553,17 @@
         <form id="registrationForm" onsubmit="sendOTP(event)">
             <div class="form-group">
                 <label for="name">👤 Full Name</label>
-                <input 
-                    id="name" 
-                    type="text"
-                    placeholder="Enter your full name"
-                    required
-                >
+                <input id="name" type="text" placeholder="Enter your full name" required>
             </div>
 
             <div class="form-group">
                 <label for="email">📧 Email Address</label>
-                <input 
-                    id="email" 
-                    type="email"
-                    placeholder="example@email.com"
-                    required
-                >
+                <input id="email" type="email" placeholder="example@email.com" required>
             </div>
 
             <div class="form-group">
                 <label for="password">🔒 Password</label>
-                <input 
-                    id="password" 
-                    type="password"
-                    placeholder="Create a strong password"
-                    required
-                >
+                <input id="password" type="password" placeholder="Create a strong password" required>
             </div>
 
             <div class="form-group">
@@ -585,8 +581,10 @@
             <div class="captcha-container">
                 <div class="g-recaptcha" data-sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"></div>
                 <div class="captcha-info">This site is protected by reCAPTCHA and the Google
-                    <a href="https://policies.google.com/privacy" target="_blank" style="color: #667eea; text-decoration: none;">Privacy Policy</a> and
-                    <a href="https://policies.google.com/terms" target="_blank" style="color: #667eea; text-decoration: none;">Terms of Service</a> apply.
+                    <a href="https://policies.google.com/privacy" target="_blank"
+                        style="color: #667eea; text-decoration: none;">Privacy Policy</a> and
+                    <a href="https://policies.google.com/terms" target="_blank"
+                        style="color: #667eea; text-decoration: none;">Terms of Service</a> apply.
                 </div>
             </div>
 
@@ -600,10 +598,14 @@
 
         <!-- OTP Verification Form -->
         <div id="otpForm" class="otp-form">
-            <div style="text-align: center; margin-bottom: 30px; padding-bottom: 25px; border-bottom: 3px solid #667eea;">
-                <h2 style="color: #667eea; font-size: 1.8em; margin-bottom: 10px; font-weight: 700;">📧 Enter Your OTP</h2>
-                <p style="color: #666; font-size: 1em; margin-bottom: 5px; font-weight: 500;">Step 2 of 2 - Verify Your Email</p>
-                <p style="color: #999; font-size: 0.95em;">A 6-digit OTP has been sent to your email address. Enter it below to verify and complete registration.</p>
+            <div
+                style="text-align: center; margin-bottom: 30px; padding-bottom: 25px; border-bottom: 3px solid #667eea;">
+                <h2 style="color: #667eea; font-size: 1.8em; margin-bottom: 10px; font-weight: 700;">📧 Enter Your OTP
+                </h2>
+                <p style="color: #666; font-size: 1em; margin-bottom: 5px; font-weight: 500;">Step 2 of 2 - Verify Your
+                    Email</p>
+                <p style="color: #999; font-size: 0.95em;">A 6-digit OTP has been sent to your email address. Enter it
+                    below to verify and complete registration.</p>
             </div>
 
             <div class="otp-info">
@@ -619,7 +621,8 @@
                 <input class="otp-input" id="otp6" type="text" maxlength="1" inputmode="numeric" placeholder="0">
             </div>
 
-            <button type="button" class="register-final-btn" onclick="verifyAndRegister()">🎉 Complete Registration</button>
+            <button type="button" class="register-final-btn" onclick="verifyAndRegister()">🎉 Complete
+                Registration</button>
             <button type="button" class="resend-btn" onclick="resendOTP()" id="resendBtn">↻ Resend OTP</button>
 
             <div class="timer" id="timer"></div>
@@ -642,15 +645,15 @@
         let otpTimer = 0;
 
         // Setup OTP input auto-focus
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             for (let i = 1; i <= 6; i++) {
                 const input = document.getElementById(`otp${i}`);
-                input.addEventListener('input', function(e) {
+                input.addEventListener('input', function (e) {
                     if (this.value.length === 1 && i < 6) {
                         document.getElementById(`otp${i + 1}`).focus();
                     }
                 });
-                input.addEventListener('keydown', function(e) {
+                input.addEventListener('keydown', function (e) {
                     if (e.key === 'Backspace' && this.value.length === 0 && i > 1) {
                         document.getElementById(`otp${i - 1}`).focus();
                     }
@@ -671,7 +674,7 @@
             successMsg.style.display = "none";
 
             // Validate inputs
-            if (!document.getElementById("name").value || !document.getElementById("email").value || 
+            if (!document.getElementById("name").value || !document.getElementById("email").value ||
                 !document.getElementById("password").value || !document.getElementById("interests").value) {
                 errorMsg.textContent = "❌ Please fill in all fields";
                 errorMsg.style.display = "block";
@@ -710,13 +713,13 @@
                 if (res.ok) {
                     successMsg.textContent = "✅ OTP sent to your email!";
                     successMsg.style.display = "block";
-                    
+
                     // Show OTP form
                     document.getElementById("registrationForm").style.display = "none";
                     const otpForm = document.getElementById("otpForm");
                     otpForm.classList.add("active");
                     otpForm.style.display = "block";
-                    
+
                     // Start timer
                     startOTPTimer();
                     document.getElementById("otp1").focus();
@@ -752,7 +755,7 @@
             successMsg.style.display = "none";
 
             // Get OTP from inputs
-            const otp = Array.from({ length: 6 }, (_, i) => 
+            const otp = Array.from({ length: 6 }, (_, i) =>
                 document.getElementById(`otp${i + 1}`).value
             ).join('');
 
@@ -787,7 +790,7 @@
                     if (createRes.ok) {
                         successMsg.textContent = "✅ Account created successfully! Redirecting to login...";
                         successMsg.style.display = "block";
-                        
+
                         setTimeout(() => {
                             window.location = "login.html";
                         }, 1500);
@@ -833,16 +836,16 @@
                 if (res.ok) {
                     errorMsg.textContent = "✅ OTP resent to your email!";
                     errorMsg.style.display = "block";
-                    
+
                     // Clear OTP inputs
                     for (let i = 1; i <= 6; i++) {
                         document.getElementById(`otp${i}`).value = '';
                     }
-                    
+
                     // Restart timer
                     startOTPTimer();
                     document.getElementById("otp1").focus();
-                    
+
                     errorMsg.style.display = "none";
                 } else {
                     errorMsg.textContent = "❌ Failed to resend OTP. Please try again.";
@@ -860,18 +863,18 @@
             otpTimer = 600; // 10 minutes
             const timerDiv = document.getElementById("timer");
             const resendBtn = document.getElementById("resendBtn");
-            
+
             const interval = setInterval(() => {
                 otpTimer--;
                 const minutes = Math.floor(otpTimer / 60);
                 const seconds = otpTimer % 60;
-                
+
                 timerDiv.textContent = `OTP expires in: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-                
+
                 if (otpTimer <= 30) {
                     timerDiv.classList.add("warning");
                 }
-                
+
                 if (otpTimer <= 0) {
                     clearInterval(interval);
                     timerDiv.textContent = "OTP expired. Please request a new one.";
@@ -893,4 +896,5 @@
         }
     </script>
 </body>
+
 </html>

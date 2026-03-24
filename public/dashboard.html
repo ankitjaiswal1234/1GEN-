@@ -1,6 +1,6 @@
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -129,11 +129,51 @@
             transform: scale(1.05);
         }
 
+        .category-card.selected {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(79, 172, 254, 0.6);
+            border: 2px solid white;
+        }
+
+        .start-chat-btn {
+            display: block;
+            width: fit-content;
+            margin: 40px auto;
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+            padding: 15px 50px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.2em;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(67, 233, 123, 0.3);
+            border: none;
+            cursor: pointer;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .start-chat-btn.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(67, 233, 123, 0.5);
+        }
+
+        .start-chat-btn.active:hover {
+            transform: scale(1.15);
+            filter: brightness(1.1);
+        }
+
         @keyframes slideDown {
             from {
                 opacity: 0;
                 transform: translateY(-30px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -171,6 +211,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -178,77 +219,122 @@
             <p>Select a country to start your video chat</p>
         </div>
 
-        <div class="categories">
-            <a href="video.html?room=usa" class="category-card">
+        <div class="categories" id="country-selection">
+            <div class="category-card" data-type="country" data-value="usa">
                 <div class="category-icon">🇺🇸</div>
                 <h2>United States</h2>
                 <p>Chat with people from USA</p>
-            </a>
+            </div>
 
-            <a href="video.html?room=india" class="category-card">
+            <div class="category-card" data-type="country" data-value="india">
                 <div class="category-icon">🇮🇳</div>
                 <h2>India</h2>
                 <p>Chat with people from India</p>
-            </a>
+            </div>
 
-            <a href="video.html?room=uk" class="category-card">
+            <div class="category-card" data-type="country" data-value="uk">
                 <div class="category-icon">🇬🇧</div>
                 <h2>United Kingdom</h2>
                 <p>Chat with people from UK</p>
-            </a>
+            </div>
 
-            <a href="video.html?room=canada" class="category-card">
+            <div class="category-card" data-type="country" data-value="canada">
                 <div class="category-icon">🇨🇦</div>
                 <h2>Canada</h2>
                 <p>Chat with people from Canada</p>
-            </a>
+            </div>
 
-            <a href="video.html?room=global" class="category-card">
+            <div class="category-card" data-type="country" data-value="global">
                 <div class="category-icon">🌍</div>
                 <h2>Global</h2>
                 <p>Chat with anyone worldwide</p>
-            </a>
+            </div>
         </div>
 
         <div class="header" style="margin-top: 40px;">
-            <p>Or select an interest to start your video chat</p>
+            <p>then select an interest to start your video chat</p>
         </div>
 
-        <div class="categories">
-            <a href="video.html?room=movie" class="category-card">
+        <div class="categories" id="interest-selection">
+            <div class="category-card" data-type="interest" data-value="movie">
                 <div class="category-icon">🎭</div>
                 <h2>Movie</h2>
                 <p>Watch and discuss movies</p>
-            </a>
+            </div>
 
-            <a href="video.html?room=study" class="category-card">
+            <div class="category-card" data-type="interest" data-value="study">
                 <div class="category-icon">📚</div>
                 <h2>Study</h2>
                 <p>Educational content</p>
-            </a>
+            </div>
 
-            <a href="video.html?room=engineering" class="category-card">
+            <div class="category-card" data-type="interest" data-value="engineering">
                 <div class="category-icon">⚙️</div>
                 <h2>Engineering</h2>
                 <p>Technical discussions</p>
-            </a>
+            </div>
 
-            <a href="video.html?room=consulting" class="category-card">
+            <div class="category-card" data-type="interest" data-value="consulting">
                 <div class="category-icon">💼</div>
                 <h2>Consulting</h2>
                 <p>Professional advice</p>
-            </a>
+            </div>
 
-            <a href="video.html?room=random" class="category-card">
+            <div class="category-card" data-type="interest" data-value="random">
                 <div class="category-icon">🎲</div>
                 <h2>Random</h2>
                 <p>Surprise content</p>
-            </a>
+            </div>
         </div>
 
         <div style="text-align: center;">
+            <button id="startChatBtn" class="start-chat-btn">Start Video Chat 🚀</button>
+            <br>
             <a href="login.html" class="logout-btn">Logout</a>
         </div>
     </div>
+
+    <script>
+        let selectedCountry = null;
+        let selectedInterest = null;
+
+        const countryCards = document.querySelectorAll('#country-selection .category-card');
+        const interestCards = document.querySelectorAll('#interest-selection .category-card');
+        const startBtn = document.getElementById('startChatBtn');
+
+        function updateSelection() {
+            if (selectedCountry && selectedInterest) {
+                startBtn.classList.add('active');
+            } else {
+                startBtn.classList.remove('active');
+            }
+        }
+
+        countryCards.forEach(card => {
+            card.addEventListener('click', () => {
+                countryCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedCountry = card.getAttribute('data-value');
+                updateSelection();
+            });
+        });
+
+        interestCards.forEach(card => {
+            card.addEventListener('click', () => {
+                interestCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedInterest = card.getAttribute('data-value');
+                updateSelection();
+            });
+        });
+
+        startBtn.addEventListener('click', () => {
+            if (selectedCountry && selectedInterest) {
+                window.location.href = `video.html?country=${selectedCountry}&interest=${selectedInterest}`;
+            }
+        });
+    </script>
+    </div>
 </body>
+
 </html>

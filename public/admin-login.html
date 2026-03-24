@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -36,6 +37,7 @@
                 opacity: 0;
                 transform: translateY(30px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -153,7 +155,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .credentials-info {
@@ -171,6 +175,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="login-container">
         <div class="header">
@@ -184,24 +189,13 @@
         <form id="adminLoginForm" onsubmit="handleLogin(event)">
             <div class="form-group">
                 <label for="email">📧 Email Address</label>
-                <input 
-                    id="email" 
-                    type="email" 
-                    placeholder="PEATALLEN23@GMAIL.COM" 
-                    required
-                    autocomplete="email"
-                >
+                <input id="email" type="email" placeholder="PEATALLEN23@GMAIL.COM" required autocomplete="email">
             </div>
 
             <div class="form-group">
                 <label for="password">🔒 Password</label>
-                <input 
-                    id="password" 
-                    type="password" 
-                    placeholder="Enter your password" 
-                    required
-                    autocomplete="current-password"
-                >
+                <input id="password" type="password" placeholder="Enter your password" required
+                    autocomplete="current-password">
             </div>
 
             <button type="submit" id="loginBtn">Login to Dashboard</button>
@@ -214,8 +208,8 @@
 
         <div class="credentials-info">
             <strong>Demo Credentials:</strong><br>
-            Email: <code>PEATALLEN23@GMAIL.COM</code><br>
-            Password: <code>123qweasE@ADMIN</code>
+            Email: <code>admin@gmail.com</code><br>
+            Password: <code>123@ADMIN456</code>
         </div>
     </div>
 
@@ -279,9 +273,10 @@
         }
 
         // Auto-fill demo credentials (optional)
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             console.log('Admin login page loaded');
         });
     </script>
 </body>
+
 </html>
