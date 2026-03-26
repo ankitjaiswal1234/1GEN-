@@ -3,7 +3,7 @@ services:
     name: 1gen-chat-by-ai
     env: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm install && node seed-user.js
     startCommand: npm start
     envVars:
       - key: NODE_ENV
@@ -24,3 +24,17 @@ services:
         value: "true"
       - key: CORS_ORIGIN
         value: "*"
+      - key: DATABASE_PATH
+        value: "./data/1gen-chat-by-ai.db"
+      - key: JWT_EXPIRY
+        value: "7d"
+      - key: BCRYPT_ROUNDS
+        value: "10"
+      - key: SESSION_TIMEOUT
+        value: "86400000"
+      - key: OTP_EXPIRY
+        value: "600000"
+      - key: FEATURE_LOGIN_TRACKING
+        value: "true"
+      - key: FEATURE_GEOLOCATION
+        value: "true"

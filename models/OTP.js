@@ -8,33 +8,46 @@ class OTP {
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // Expires in 10 minutes
 
         try {
+            console.log(`📝 Creating OTP record for ${email}`);
             await database.run(
                 'INSERT INTO otps (_id, email, code, expiresAt, verified) VALUES (?, ?, ?, ?, ?)',
                 [_id, email, code, expiresAt.toISOString(), 0]
             );
+            console.log(`✓ OTP record created: ${_id}`);
             return { _id, code, expiresAt };
         } catch (error) {
+            console.error(`❌ Error creating OTP record: ${error.message}`);
             throw new Error('Error creating OTP: ' + error.message);
         }
     }
 
     static async findByEmailAndCode(email, code) {
         try {
+            console.log(`🔍 Searching for OTP: email=${email}, code=${code}`);
             const otp = await database.get(
                 'SELECT * FROM otps WHERE email = ? AND code = ? AND verified = 0 ORDER BY createdAt DESC LIMIT 1',
                 [email, code]
             );
             
-            if (!otp) return null;
+            if (!otp) {
+                console.log(`⚠️ OTP NOT FOUND or already verified for ${email}`);
+                return null;
+            }
 
             // Check if OTP has expired
             const expiresAt = new Date(otp.expiresAt);
-            if (expiresAt < new Date()) {
+            const now = new Date();
+            console.log(`🕒 OTP check: expiresAt=${otp.expiresAt}, current=${now.toISOString()}`);
+            
+            if (expiresAt < now) {
+                console.log(`⚠️ OTP EXPIRED for ${email}`);
                 return null; // OTP expired
             }
 
+            console.log(`✓ Valid OTP found for ${email}`);
             return otp;
         } catch (error) {
+            console.error(`❌ Error finding OTP: ${error.message}`);
             throw new Error('Error finding OTP: ' + error.message);
         }
     }

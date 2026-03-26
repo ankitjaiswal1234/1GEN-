@@ -25,6 +25,7 @@ const OTP = require("./models/OTP")
 const { sendOTPEmail, sendWelcomeEmail } = require("./utils/emailService")
 
 const app = express()
+app.set('trust proxy', 1); // Trust Render's proxy for getting correct client IP
 const server = http.createServer(app)
 const io = socketio(server, {
     cors: {
@@ -56,8 +57,17 @@ console.log("━━━━━━━━━━━━━━━━━━━━━━�
 console.log(`📍 Environment: ${NODE_ENV}`)
 console.log(`📍 Port: ${PORT}`)
 console.log(`📍 CORS Origin: ${CORS_ORIGIN}`)
-console.log("✓ SQLite database initialized")
-console.log("✓ Data location: data/1gen-chat-by-ai.db")
+console.log(`✓ Data location: data/1gen-chat-by-ai.db`);
+
+// Health check endpoint
+app.get("/health", (req, res) => {
+    res.json({
+        status: "alive",
+        database: database.isReady() ? "ready" : "initializing",
+        time: new Date().toISOString(),
+        env: NODE_ENV
+    });
+});
 
 // User registration - Step 1: Send OTP
 app.post("/send-otp", async (req,res)=>{
@@ -79,8 +89,10 @@ app.post("/send-otp", async (req,res)=>{
         const otpData = await OTP.create(email)
         
         // Send OTP email
-        await sendOTPEmail(email, otpData.code)
+        console.log(`📧 Attempting to send OTP to: ${email}`);
+        await sendOTPEmail(email, otpData.code);
         
+        console.log(`✓ OTP successfully sent to: ${email}`);
         res.json({
             message:"OTP sent to your email",
             success:true
@@ -97,11 +109,14 @@ app.post("/verify-otp", async (req,res)=>{
         const {email, otp} = req.body
         
         if (!email || !otp) {
+            console.log('⚠️ OTP Verification failed: Missing email or code');
             return res.status(400).json({message:"Email and OTP are required"})
         }
         
+        console.log(`🔍 Verifying OTP for: ${email}`);
         // Verify OTP
         await OTP.verify(email, otp)
+        console.log(`✓ OTP verified for: ${email}`);
         
         res.json({
             message:"OTP verified successfully",

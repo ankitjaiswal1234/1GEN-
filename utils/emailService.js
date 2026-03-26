@@ -5,10 +5,39 @@ const nodemailer = require('nodemailer');
 // For other providers, update accordingly
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // true for 465, false for 587
     auth: {
-        user: process.env.EMAIL_USER || 'your-email@gmail.com',
-        pass: process.env.EMAIL_PASSWORD || 'your-app-password'
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
+    },
+    tls: {
+        rejectUnauthorized: false // Helps with connection issues on some hosting providers
+    }
+});
+
+// Get the base URL for emails
+const getBaseUrl = () => {
+    if (process.env.RENDER_EXTERNAL_URL) {
+        return process.env.RENDER_EXTERNAL_URL;
+    }
+    return `http://localhost:${process.env.PORT || 3000}`;
+};
+
+// Verify connection on startup with more detail
+transporter.verify(function(error, success) {
+    if (error) {
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('❌ EMAIL SERVICE CONNECTION FAILED');
+        console.log('Error Code:', error.code || 'N/A');
+        console.log('Error Message:', error.message || 'Unknown error');
+        console.log('Host:', error.host || 'smtp.gmail.com');
+        console.log('Port:', error.port || 587);
+        console.log('NODE_ENV:', process.env.NODE_ENV || 'development');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    } else {
+        console.log('✓ Email Service Connectivity Verified');
     }
 });
 
@@ -16,13 +45,20 @@ const transporter = nodemailer.createTransport({
 const sendEmail = async (to, subject, htmlContent, textContent) => {
     try {
         // Check if email credentials are configured
-        if (process.env.EMAIL_USER === undefined || process.env.EMAIL_PASSWORD === undefined) {
-            // If not configured, log to console (for development)
-            console.log('📧 Email Service (Dev Mode - Not Configured)');
+        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+            const isProduction = process.env.NODE_ENV === 'production';
+            
+            if (isProduction) {
+                console.error('❌ CRITICAL: Email credentials missing in production environment!');
+                throw new Error('Email service is not configured. Please set EMAIL_USER and EMAIL_PASSWORD environment variables.');
+            }
+
+            // If not configured in development, log to console
+            console.log('⚠️ Email Service Not Configured! Using Console Log Fallback (Development Mode).');
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             console.log('To:', to);
             console.log('Subject:', subject);
-            console.log('Content:', textContent);
+            console.log('Content Summary:', textContent.substring(0, 100) + '...');
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             return { success: true, devMode: true };
         }
@@ -139,7 +175,7 @@ const sendWelcomeEmail = async (email, name) => {
                     <p>Your account has been successfully created and verified. You can now start connecting with others.</p>
                     
                     <p style="text-align: center;">
-                        <a href="http://localhost:3000/login.html" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; border-radius: 5px; text-decoration: none; margin: 20px 0;">
+                        <a href="${getBaseUrl()}/login.html" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; border-radius: 5px; text-decoration: none; margin: 20px 0;">
                             Go to Login
                         </a>
                     </p>
@@ -170,7 +206,7 @@ const sendWelcomeEmail = async (email, name) => {
 
     Your account has been successfully created and verified. You can now start connecting with others.
 
-    Visit: http://localhost:3000/login.html
+    Visit: ${getBaseUrl()}/login.html
 
     © 2026 1GEN CHAT BY AI. All rights reserved.
     `;

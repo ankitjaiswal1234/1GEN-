@@ -1,7 +1,9 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-const dbPath = path.join(__dirname, 'data', '1gen-chat-by-ai.db');
+const dbPath = process.env.DATABASE_PATH ? 
+    (path.isAbsolute(process.env.DATABASE_PATH) ? process.env.DATABASE_PATH : path.join(__dirname, process.env.DATABASE_PATH)) : 
+    path.join(__dirname, 'data', '1gen-chat-by-ai.db');
 
 // Create database directory if it doesn't exist
 const fs = require('fs');
@@ -20,6 +22,8 @@ const db = new sqlite3.Database(dbPath, (err) => {
         initializeTables().then(() => {
             dbReady = true;
             console.log('✓ All tables initialized and ready');
+        }).catch(err => {
+            console.error('✗ Table initialization failed:', err);
         });
     }
 });
@@ -198,7 +202,9 @@ async function createDefaultAdmin() {
             console.log('Email:    ' + adminEmail);
             console.log('Password: ' + adminPassword);
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('Access admin dashboard: http://localhost:3000/admin.html');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            const baseUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 3000}`;
+            console.log('Access admin dashboard: ' + baseUrl + '/admin.html');
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         }
     } catch (error) {
