@@ -10,7 +10,8 @@ async function createUser() {
         
         const email = 'ankitjaiswalupd@gmail.com';
         const rawPassword = '123qweasE@';
-        
+
+
         const existing = await User.findOne({email});
         if (existing) {
             console.log('User already exists. Updating password and verifying email...');

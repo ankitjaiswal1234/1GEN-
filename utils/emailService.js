@@ -5,16 +5,22 @@ const nodemailer = require('nodemailer');
 // For other providers, update accordingly
 
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // true for 465, false for 587
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.EMAIL_PORT) || 465,
+    secure: process.env.EMAIL_SECURE !== 'false', // Default to true for 465
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD
     },
     tls: {
-        rejectUnauthorized: false // Helps with connection issues on some hosting providers
-    }
+        rejectUnauthorized: false
+    },
+    // Force IPv4 to avoid ENETUNREACH on Render/other IPv6-challenged hosts
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000, 
+    socketTimeout: 10000,
+    dnsTimeout: 5000,
+    family: 4 
 });
 
 // Get the base URL for emails
@@ -32,8 +38,7 @@ transporter.verify(function(error, success) {
         console.log('❌ EMAIL SERVICE CONNECTION FAILED');
         console.log('Error Code:', error.code || 'N/A');
         console.log('Error Message:', error.message || 'Unknown error');
-        console.log('Host:', error.host || 'smtp.gmail.com');
-        console.log('Port:', error.port || 587);
+        console.log('Host/Port:', (error.host || process.env.EMAIL_HOST || 'smtp.gmail.com') + ':' + (error.port || process.env.EMAIL_PORT || 465));
         console.log('NODE_ENV:', process.env.NODE_ENV || 'development');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     } else {
