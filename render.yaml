@@ -3,7 +3,7 @@ services:
     name: 1gen-chat-by-ai
     env: node
     plan: free
-    buildCommand: npm install && node seed-user.js
+    buildCommand: npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV
