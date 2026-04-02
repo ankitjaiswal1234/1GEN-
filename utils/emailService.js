@@ -80,7 +80,16 @@ const sendEmail = async (to, subject, htmlContent, textContent) => {
         return { success: true, messageId: result.messageId };
     } catch (error) {
         console.error('✗ Error sending email:', error.message);
-        throw new Error('Failed to send email: ' + error.message);
+        const errorDetails = {
+            message: error.message,
+            code: error.code,
+            command: error.command,
+            address: error.address,
+            port: error.port,
+            host: error.host || process.env.EMAIL_HOST || 'smtp.gmail.com'
+        };
+        console.error('Error Details:', JSON.stringify(errorDetails, null, 2));
+        throw new Error(`Email failed: ${error.message} (${error.code || 'NO_CODE'})`);
     }
 };
 

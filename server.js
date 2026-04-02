@@ -303,6 +303,52 @@ app.get("/api/history", async (req, res) => {
 const adminRoutes = require("./routes/admin")
 app.use("/api", adminRoutes)
 
+// Email debug endpoint
+app.get("/api/debug/email", async (req, res) => {
+    try {
+        const { sendEmail } = require("./utils/emailService");
+        const config = {
+            user: process.env.EMAIL_USER ? `Present (${process.env.EMAIL_USER.substring(0, 3)}...)` : 'Missing',
+            pass: process.env.EMAIL_PASSWORD ? 'Present (Hidden)' : 'Missing',
+            host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+            port: process.env.EMAIL_PORT || 465,
+            secure: process.env.EMAIL_SECURE || 'true',
+            family: 4,
+            node_env: process.env.NODE_ENV
+        };
+
+        // Try a verification
+        const nodemailer = require('nodemailer');
+        const transporter = nodemailer.createTransport({
+            host: config.host,
+            port: parseInt(config.port),
+            secure: config.secure !== 'false',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASSWORD
+            },
+            family: 4,
+            connectionTimeout: 5000
+        });
+
+        let connectionStatus = 'Testing...';
+        try {
+            await transporter.verify();
+            connectionStatus = 'Success';
+        } catch (e) {
+            connectionStatus = `Failed: ${e.message}`;
+        }
+
+        res.json({
+            config,
+            connectionStatus,
+            timestamp: new Date().toISOString()
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Wait for database to be ready before starting server
 async function startServer() {
     await database.waitForReady();
