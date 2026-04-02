@@ -63,6 +63,7 @@ console.log(`✓ Data location: data/1gen-chat-by-ai.db`);
 app.get("/health", (req, res) => {
     res.json({
         status: "alive",
+        version: "1.0.2-debug",
         database: database.isReady() ? "ready" : "initializing",
         time: new Date().toISOString(),
         env: NODE_ENV
