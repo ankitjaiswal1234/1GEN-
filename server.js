@@ -63,7 +63,6 @@ console.log(`✓ Data location: data/1gen-chat-by-ai.db`);
 app.get("/health", (req, res) => {
     res.json({
         status: "alive",
-        version: "1.0.2-debug",
         database: database.isReady() ? "ready" : "initializing",
         time: new Date().toISOString(),
         env: NODE_ENV
@@ -304,50 +303,9 @@ app.get("/api/history", async (req, res) => {
 const adminRoutes = require("./routes/admin")
 app.use("/api", adminRoutes)
 
-// Email debug endpoint (at root to avoid /api conflicts)
-app.get("/debug-email", async (req, res) => {
-    try {
-        const config = {
-            user: process.env.EMAIL_USER ? `Present (${process.env.EMAIL_USER.substring(0, 3)}...)` : 'Missing',
-            pass: process.env.EMAIL_PASSWORD ? 'Present (Hidden)' : 'Missing',
-            host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-            port: process.env.EMAIL_PORT || 465,
-            secure: process.env.EMAIL_SECURE || 'true',
-            service: process.env.EMAIL_SERVICE,
-            node_env: process.env.NODE_ENV
-        };
-
-        const nodemailer = require('nodemailer');
-        const transporter = nodemailer.createTransport({
-            host: config.host,
-            port: parseInt(config.port),
-            secure: config.secure !== 'false',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASSWORD
-            },
-            family: 4,
-            connectionTimeout: 5000
-        });
-
-        let connectionStatus = 'Testing...';
-        try {
-            await transporter.verify();
-            connectionStatus = 'Success';
-        } catch (e) {
-            connectionStatus = `Failed: ${e.message}`;
-        }
-
-        res.json({
-            config,
-            connectionStatus,
-            timestamp: new Date().toISOString(),
-            info: "Verification forced family: 4"
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+// Add admin routes
+const adminRoutes = require("./routes/admin")
+app.use("/api", adminRoutes)
 
 // Wait for database to be ready before starting server
 async function startServer() {
