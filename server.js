@@ -303,21 +303,19 @@ app.get("/api/history", async (req, res) => {
 const adminRoutes = require("./routes/admin")
 app.use("/api", adminRoutes)
 
-// Email debug endpoint
-app.get("/api/debug/email", async (req, res) => {
+// Email debug endpoint (at root to avoid /api conflicts)
+app.get("/debug-email", async (req, res) => {
     try {
-        const { sendEmail } = require("./utils/emailService");
         const config = {
             user: process.env.EMAIL_USER ? `Present (${process.env.EMAIL_USER.substring(0, 3)}...)` : 'Missing',
             pass: process.env.EMAIL_PASSWORD ? 'Present (Hidden)' : 'Missing',
             host: process.env.EMAIL_HOST || 'smtp.gmail.com',
             port: process.env.EMAIL_PORT || 465,
             secure: process.env.EMAIL_SECURE || 'true',
-            family: 4,
+            service: process.env.EMAIL_SERVICE,
             node_env: process.env.NODE_ENV
         };
 
-        // Try a verification
         const nodemailer = require('nodemailer');
         const transporter = nodemailer.createTransport({
             host: config.host,
@@ -342,7 +340,8 @@ app.get("/api/debug/email", async (req, res) => {
         res.json({
             config,
             connectionStatus,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            info: "Verification forced family: 4"
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
