@@ -303,108 +303,147 @@ app.get("/api/history", async (req, res) => {
 const adminRoutes = require("./routes/admin")
 app.use("/api", adminRoutes)
 
-// Add admin routes
-const adminRoutes = require("./routes/admin")
-app.use("/api", adminRoutes)
-
 // Wait for database to be ready before starting server
 async function startServer() {
     await database.waitForReady();
     
     let waitingUsers = []
     let userSessions = {}
+    // Lobby: users browsing profiles (not yet in a call)
+    let lobbyUsers = {}
 
-    io.on("connection",(socket)=>{
-
-socket.on("join",(user)=>{
-
-userSessions[socket.id] = {
-userId: user.id,
-joinTime: Date.now(),
-user: user
-}
-
-let match = waitingUsers.find(u =>
-u.interests.some(i => user.interests.includes(i))
-)
-
-if(match){
-
-socket.join(match.socket)
-socket.emit("matched",match.socket)
-io.to(match.socket).emit("matched",socket.id)
-
-// Emit user info to both users
-socket.emit("userConnected", match.user)
-io.to(match.socket).emit("userConnected", user)
-
-waitingUsers = waitingUsers.filter(u=>u.socket!==match.socket)
-
-}else{
-
-waitingUsers.push({
-socket:socket.id,
-interests:user.interests,
-user: user
-})
-
-}
-
-})
-
-socket.on("skip",()=>{
-
-socket.disconnect()
-
-})
-
-socket.on("message", async (data) => {
-    try {
-        const rooms = Array.from(socket.rooms);
-        const room = rooms.find(r => r !== socket.id) || socket.id;
-        
-        // Broadcast to the other user
-        socket.to(room).emit("message", data);
-
-        const senderSession = userSessions[socket.id];
-        let receiverSession = null;
-        
-        // find receiver session
-        for (let key in userSessions) {
-             if (key !== socket.id) {
-                 const otherSocket = io.sockets.sockets.get(key);
-                 if (otherSocket && Array.from(otherSocket.rooms).includes(room)) {
-                     receiverSession = userSessions[key];
-                     break;
-                 }
-             }
-        }
-
-        if (senderSession && receiverSession && senderSession.userId && receiverSession.userId && !senderSession.userId.startsWith('guest-') && !receiverSession.userId.startsWith('guest-')) {
-            const msgId = 'msg_' + Date.now() + Math.random().toString(36).substr(2, 5);
-            await database.run(
-                'INSERT INTO messages (_id, senderId, senderName, receiverId, receiverName, text) VALUES (?, ?, ?, ?, ?, ?)',
-                [msgId, senderSession.userId, data.sender || senderSession.user.name, receiverSession.userId, receiverSession.user.name, data.text]
-            );
-        }
-    } catch(err) {
-        console.error("Message error:", err);
+    function broadcastLobbyUsers() {
+        const list = Object.values(lobbyUsers).map(u => ({
+            socketId: u.socketId,
+            name: u.name,
+            interests: u.interests,
+            avatar: u.avatar || null,
+            country: u.country || 'Unknown'
+        }));
+        io.emit('lobby-users', list);
     }
-});
 
-    socket.on("disconnect", async () => {
-        if (userSessions[socket.id]) {
+    io.on("connection", (socket) => {
+
+        // ===== LOBBY =====
+        socket.on("lobby-join", (user) => {
+            userSessions[socket.id] = { userId: user._id || user.id, joinTime: Date.now(), user };
+            lobbyUsers[socket.id] = {
+                socketId: socket.id,
+                name: user.name,
+                interests: user.interests || [],
+                avatar: user.avatar || null,
+                country: user.country || 'Unknown'
+            };
+            broadcastLobbyUsers();
+        });
+
+        socket.on("lobby-leave", () => {
+            delete lobbyUsers[socket.id];
+            broadcastLobbyUsers();
+        });
+
+        // Match request from one user to another
+        socket.on("send-match-request", ({ targetSocketId, fromUser }) => {
+            io.to(targetSocketId).emit("match-request", {
+                fromSocketId: socket.id,
+                fromUser
+            });
+        });
+
+        // Response to a match request
+        socket.on("match-response", ({ accepted, toSocketId, roomId, acceptorUser }) => {
+            if (accepted) {
+                // Tell both to join a dedicated room
+                socket.join(roomId);
+                const targetSocket = io.sockets.sockets.get(toSocketId);
+                if (targetSocket) targetSocket.join(roomId);
+
+                // Remove from lobby
+                delete lobbyUsers[socket.id];
+                delete lobbyUsers[toSocketId];
+                broadcastLobbyUsers();
+
+                // Redirect both — send the acceptor's info to the requester
+                io.to(toSocketId).emit("match-accepted", { roomId, partnerUser: acceptorUser || {} });
+                socket.emit("match-accepted", { roomId });
+            } else {
+                io.to(toSocketId).emit("match-declined");
+            }
+        });
+
+        // ===== CALL ROOM (in call.html) =====
+        socket.on("call-join", ({ roomId, user }) => {
+            socket.join(roomId);
+            userSessions[socket.id] = { userId: user._id || user.id, joinTime: Date.now(), user, roomId };
+            // Notify others in room that a peer joined
+            socket.to(roomId).emit("peer-joined", { socketId: socket.id, user });
+        });
+
+        // WebRTC signaling relay
+        socket.on("webrtc-offer", ({ roomId, offer }) => {
+            socket.to(roomId).emit("webrtc-offer", { from: socket.id, offer });
+        });
+        socket.on("webrtc-answer", ({ roomId, answer }) => {
+            socket.to(roomId).emit("webrtc-answer", { from: socket.id, answer });
+        });
+        socket.on("webrtc-ice", ({ roomId, candidate }) => {
+            socket.to(roomId).emit("webrtc-ice", { from: socket.id, candidate });
+        });
+
+        // ===== MESSAGES =====
+        socket.on("message", async (data) => {
+            try {
+                const rooms = Array.from(socket.rooms);
+                const room = rooms.find(r => r !== socket.id) || socket.id;
+                socket.to(room).emit("message", data);
+
+                const senderSession = userSessions[socket.id];
+                let receiverSession = null;
+                for (let key in userSessions) {
+                    if (key !== socket.id) {
+                        const otherSocket = io.sockets.sockets.get(key);
+                        if (otherSocket && Array.from(otherSocket.rooms).includes(room)) {
+                            receiverSession = userSessions[key];
+                            break;
+                        }
+                    }
+                }
+                if (senderSession && receiverSession && senderSession.userId && receiverSession.userId && !senderSession.userId.startsWith('guest-') && !receiverSession.userId.startsWith('guest-')) {
+                    const msgId = 'msg_' + Date.now() + Math.random().toString(36).substr(2, 5);
+                    await database.run(
+                        'INSERT INTO messages (_id, senderId, senderName, receiverId, receiverName, text) VALUES (?, ?, ?, ?, ?, ?)',
+                        [msgId, senderSession.userId, data.sender || senderSession.user.name, receiverSession.userId, receiverSession.user.name, data.text]
+                    );
+                }
+            } catch(err) {
+                console.error("Message error:", err);
+            }
+        });
+
+        // ===== DISCONNECT =====
+        socket.on("disconnect", async () => {
+            // Notify call room partner
             const session = userSessions[socket.id];
-            const duration = Math.round((Date.now() - session.joinTime) / 1000);
-            delete userSessions[socket.id];
-        }
+            if (session && session.roomId) {
+                socket.to(session.roomId).emit('partner-left', {
+                    name: session.user ? session.user.name : 'Partner'
+                });
+            }
 
-        waitingUsers = waitingUsers.filter(u => u.socket !== socket.id);
-    });
-    
+            if (userSessions[socket.id]) {
+                delete userSessions[socket.id];
+            }
+            if (lobbyUsers[socket.id]) {
+                delete lobbyUsers[socket.id];
+                broadcastLobbyUsers();
+            }
+            waitingUsers = waitingUsers.filter(u => u.socket !== socket.id);
+        });
+
     });
 
-    server.listen(PORT,()=>{
+    server.listen(PORT, () => {
         console.log(`Server running on ${PORT}`)
     });
 }
