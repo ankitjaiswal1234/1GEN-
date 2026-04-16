@@ -578,14 +578,11 @@
                 </select>
             </div>
 
-            <div class="captcha-container">
-                <div class="g-recaptcha" data-sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"></div>
-                <div class="captcha-info">This site is protected by reCAPTCHA and the Google
-                    <a href="https://policies.google.com/privacy" target="_blank"
-                        style="color: #667eea; text-decoration: none;">Privacy Policy</a> and
-                    <a href="https://policies.google.com/terms" target="_blank"
-                        style="color: #667eea; text-decoration: none;">Terms of Service</a> apply.
-                </div>
+            <div class="captcha-container" style="display: none;">
+                <div class="g-recaptcha" 
+                    data-sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI" 
+                    data-callback="onCaptchaVerified"
+                    data-size="invisible"></div>
             </div>
 
             <button type="submit" class="register-btn-main">📝 Register & Send OTP</button>
@@ -661,8 +658,15 @@
             }
         });
 
-        async function sendOTP(event) {
-            event.preventDefault();
+        // Global callback for invisible recaptcha
+        function onCaptchaVerified(token) {
+            // Re-trigger the sendOTP execution after captcha check
+            const event = { preventDefault: () => {} };
+            sendOTP(event, true);
+        }
+
+        async function sendOTP(event, isCaptchaDone = false) {
+            if (event) event.preventDefault();
 
             const errorMsg = document.getElementById("errorMessage");
             const successMsg = document.getElementById("successMessage");
@@ -681,11 +685,9 @@
                 return;
             }
 
-            // Check if reCAPTCHA is verified
-            const recaptchaResponse = grecaptcha.getResponse();
-            if (!recaptchaResponse) {
-                errorMsg.textContent = "❌ Please verify the reCAPTCHA";
-                errorMsg.style.display = "block";
+            // Trigger reCAPTCHA if not done
+            if (!isCaptchaDone) {
+                grecaptcha.execute();
                 return;
             }
 
@@ -724,6 +726,9 @@
                     startOTPTimer();
                     document.getElementById("otp1").focus();
 
+                    // Reset recaptcha for later
+                    grecaptcha.reset();
+
                     // Clear messages after 2 seconds
                     setTimeout(() => {
                         successMsg.style.display = "none";
@@ -734,12 +739,14 @@
                     errorMsg.style.display = "block";
                     loadingDiv.style.display = "none";
                     registerBtn.disabled = false;
+                    grecaptcha.reset();
                 }
             } catch (error) {
                 errorMsg.textContent = "❌ An error occurred. Please try again.";
                 errorMsg.style.display = "block";
                 loadingDiv.style.display = "none";
                 registerBtn.disabled = false;
+                grecaptcha.reset();
                 console.error("OTP sending error:", error);
             }
         }

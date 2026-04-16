@@ -8,6 +8,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- AI & Video Effects Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nsfwjs@2.4.1/dist/bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <style>
         :root {
             --bg: #0a0a0c;
@@ -134,6 +141,144 @@
         .waiting-text {
             color: var(--muted);
             font-size: 16px;
+        }
+
+        /* Appreciation Modal Styles */
+        .rating-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .rating-overlay.visible { display: flex; }
+        .rating-card {
+            background: var(--surface);
+            padding: 30px;
+            border-radius: 24px;
+            width: 340px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            animation: ratingSlideUp 0.3s ease-out;
+        }
+        .rating-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: var(--surface2);
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            overflow: hidden;
+        }
+        .rating-title { font-size: 20px; font-weight: 700; margin-bottom: 5px; }
+        .rating-text { font-size: 14px; color: var(--muted); margin-bottom: 25px; }
+        
+        .star-picker {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            font-size: 28px;
+            margin-bottom: 25px;
+        }
+        .star-picker i { cursor: pointer; color: var(--surface2); transition: 0.2s; }
+        .star-picker i.active { color: #f59e0b; transform: scale(1.1); }
+        
+        .heart-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            border-radius: 12px;
+            background: var(--surface2);
+            cursor: pointer;
+            margin-bottom: 25px;
+            transition: 0.2s;
+            user-select: none;
+        }
+        .heart-toggle i { color: var(--muted); }
+        .heart-toggle.active { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .heart-toggle.active i { color: #ef4444; }
+        
+        .rating-actions { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+        .rating-btn {
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .rating-btn-primary { background: var(--accent); color: white; }
+        .rating-btn-secondary { background: var(--surface2); color: var(--text); }
+        .rating-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        @keyframes ratingSlideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Video Effects Panel */
+        .effects-panel {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 280px;
+            background: rgba(20, 20, 22, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 20px;
+            z-index: 500;
+            display: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            animation: effectsSlideUp 0.3s ease-out;
+        }
+        .effects-panel.visible { display: block; }
+        .effects-title { font-weight: 700; font-size: 16px; margin-bottom: 15px; color: var(--accent2); }
+        .effects-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .effect-option {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 13px;
+        }
+        .effect-option i { display: block; font-size: 20px; margin-bottom: 6px; }
+        .effect-option:hover { border-color: var(--accent); }
+        .effect-option.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+        /* Safety Warning */
+        .safety-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            backdrop-filter: blur(80px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            text-align: center;
+            padding: 40px;
+        }
+        .safety-overlay.visible { display: flex; }
+        .safety-icon { font-size: 50px; color: var(--danger); margin-bottom: 20px; }
+        .safety-title { font-weight: 800; font-size: 22px; margin-bottom: 10px; }
+        .safety-desc { font-size: 15px; color: var(--muted); margin-bottom: 30px; line-height: 1.6; }
+
+        @keyframes effectsSlideUp {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
 
         /* Partner info overlays (now one per remote video) */
@@ -1419,10 +1564,18 @@
                     id="translateIcon"></i></button>
             <span>Translate</span>
         </div>
+        <div class="ctrl-label">
+            <button class="ctrl-btn" onclick="toggleEffectsPanel()"><i class="fas fa-magic"></i></button>
+            <span>Magic</span>
+        </div>
         <div class="ctrl-label" style="position:relative;">
             <button class="ctrl-btn" id="chatBtn" onclick="toggleChat()"><i class="fas fa-comment"></i></button>
             <div class="chat-badge" id="chatBadge">!</div>
             <span>Chat</span>
+        </div>
+        <div class="ctrl-label">
+            <button class="ctrl-btn" style="background:#f59e0b;color:white;border-color:#f59e0b;" onclick="skipMatch()"><i class="fas fa-forward"></i></button>
+            <span>Skip</span>
         </div>
         <div class="ctrl-label">
             <button class="ctrl-btn end" onclick="endCall()"><i class="fas fa-phone-slash"></i></button>
@@ -1432,6 +1585,52 @@
 
     <!-- Notification -->
     <div class="notif" id="notif"></div>
+
+    <!-- Video Effects Panel -->
+    <div class="effects-panel" id="effectsPanel">
+        <div class="effects-title"><i class="fas fa-magic"></i> Video Effects</div>
+        <div class="effects-grid">
+            <div class="effect-option active" onclick="setVideoEffect('none')" id="eff-none">
+                <i class="fas fa-ban"></i> None
+            </div>
+            <div class="effect-option" onclick="setVideoEffect('blur')" id="eff-blur">
+                <i class="fas fa-ghost"></i> Blur
+            </div>
+            <div class="effect-option" onclick="setVideoEffect('office')" id="eff-office">
+                <i class="fas fa-briefcase"></i> Office
+            </div>
+            <div class="effect-option" onclick="setVideoEffect('beach')" id="eff-beach">
+                <i class="fas fa-umbrella-beach"></i> Beach
+            </div>
+        </div>
+    </div>
+
+    <!-- Appreciation Modal -->
+    <div class="rating-overlay" id="ratingOverlay">
+        <div class="rating-card">
+            <div class="rating-avatar" id="ratingAvatar">👤</div>
+            <div class="rating-title">Rate <span id="ratingPartnerName">Partner</span></div>
+            <div class="rating-text">How was your communication today?</div>
+            
+            <div class="star-picker">
+                <i class="fas fa-star" data-value="1"></i>
+                <i class="fas fa-star" data-value="2"></i>
+                <i class="fas fa-star" data-value="3"></i>
+                <i class="fas fa-star" data-value="4"></i>
+                <i class="fas fa-star" data-value="5"></i>
+            </div>
+
+            <div class="heart-toggle" id="heartToggle">
+                <i class="fas fa-heart"></i>
+                <span>Give a Heart</span>
+            </div>
+
+            <div class="rating-actions">
+                <button class="rating-btn rating-btn-primary" id="submitRatingBtn" onclick="submitRating()">Submit & Next</button>
+                <button class="rating-btn rating-btn-secondary" onclick="closeRatingModal(true)">Skip</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Partner Left Overlay -->
     <div class="partner-left-overlay" id="partnerLeftOverlay">
@@ -1459,6 +1658,17 @@
         </div>
     </div>
 
+    <!-- Safety Overlay -->
+    <div class="safety-overlay" id="safetyOverlay">
+        <div class="safety-icon"><i class="fas fa-shield-alt"></i></div>
+        <div class="safety-title">Safety Shield Activated</div>
+        <div class="safety-desc">Our AI has detected potentially inappropriate content in this stream. For your safety, the video has been blurred.</div>
+        <div style="display:flex;gap:15px;">
+            <button class="rating-btn rating-btn-primary" onclick="skipMatch()">Skip & Next</button>
+            <button class="rating-btn rating-btn-secondary" onclick="ignoreSafetyShield()">Dismiss</button>
+        </div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         // ===== STATE =====
@@ -1467,6 +1677,7 @@
         let currentStream = null;
         let screenStream = null;
         let peers = new Map(); // socketId -> RTCPeerConnection
+        let earlyCandidates = new Map(); // socketId -> candidate queue
         let roomId = null;
         let isMuted = false;
         let isCamOff = false;
@@ -1475,11 +1686,35 @@
         let chatOpen = false;
         let unreadCount = 0;
 
+        // AI & Video Effects State
+        let nsfwModel = null;
+        let isModerationActive = true;
+        let safetyShieldIgnored = false;
+        let selfieSegmentation = null;
+        let currentEffect = 'none';
+        let processingCanvas = document.createElement('canvas');
+        let processingCtx = processingCanvas.getContext('2d');
+        let outputStream = null;
+
+        // Background Images
+        const bgTemplates = {
+            office: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1280&q=80',
+            beach: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1280&q=80'
+        };
+        const bgImages = {};
+        Object.keys(bgTemplates).forEach(key => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.src = bgTemplates[key];
+            bgImages[key] = img;
+        });
+
         // ICE servers
         const iceServers = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun4.l.google.com:19302' }
             ]
         };
 
@@ -1517,22 +1752,11 @@
                 interestsWrap.appendChild(tag);
             });
 
-            // Set avatar if available
-            if (matchedPartner.avatar) {
-                document.getElementById('waitingAvatar').innerHTML =
-                    `<img src="${matchedPartner.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-            }
-
-            // Pre-fill partner overlay
-            document.getElementById('partnerNameDisplay').textContent = matchedPartner.name || 'Partner';
-            document.getElementById('partnerMetaDisplay').textContent = (matchedPartner.country || '');
-            const tagsContainer = document.getElementById('partnerTagsDisplay');
-            (matchedPartner.interests || []).forEach(i => {
-                const tag = document.createElement('span');
-                tag.className = 'partner-tag';
-                tag.textContent = i;
-                tagsContainer.appendChild(tag);
-            });
+                // Set avatar if available
+                if (matchedPartner.avatar) {
+                    document.getElementById('waitingAvatar').innerHTML =
+                        `<img src="${matchedPartner.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                }
         }
 
         socket = io();
@@ -1555,9 +1779,150 @@
             socket.emit('call-join', { roomId, user });
 
             setupSocketHandlers();
+            
+            // Start AI Moderation
+            initSafetyShield();
+            // Start Video Effects
+            initVideoEffects();
+        }
+
+        // ===== AI SAFETY SHIELD =====
+        async function initSafetyShield() {
+            try {
+                nsfwModel = await nsfwjs.load();
+                console.log("🛡️ AI Safety Shield Ready");
+                startModerationLoop();
+            } catch (err) {
+                console.error("Moderation load error:", err);
+            }
+        }
+
+        async function startModerationLoop() {
+            if (!isModerationActive || safetyShieldIgnored) return;
+            
+            const partnerVideo = document.getElementById('partnerVideo');
+            if (partnerVideo && partnerVideo.readyState >= 2) {
+                try {
+                    const predictions = await nsfwModel.classify(partnerVideo);
+                    const nsfwScores = predictions.filter(p => p.className === 'Porn' || p.className === 'Hentai' || p.className === 'Sexy');
+                    const maxProb = Math.max(...nsfwScores.map(p => p.probability));
+
+                    if (maxProb > 0.65) {
+                        activateSafetyShield();
+                    }
+                } catch (e) {}
+            }
+            setTimeout(startModerationLoop, 4000);
+        }
+
+        function activateSafetyShield() {
+            document.getElementById('safetyOverlay').classList.add('visible');
+            document.getElementById('partnerVideo').classList.add('safety-blur');
+        }
+
+        function ignoreSafetyShield() {
+            safetyShieldIgnored = true;
+            document.getElementById('safetyOverlay').classList.remove('visible');
+            document.getElementById('partnerVideo').classList.remove('safety-blur');
+            showNotif("Shield deactivated for this match.");
+        }
+
+        // ===== VIDEO EFFECTS (VIRTUAL BACKGROUND) =====
+        function initVideoEffects() {
+            selfieSegmentation = new SelfieSegmentation({
+                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
+            });
+            selfieSegmentation.setOptions({ modelSelection: 1 });
+            selfieSegmentation.onResults(onSegmentationResults);
+        }
+
+        function toggleEffectsPanel() {
+            document.getElementById('effectsPanel').classList.toggle('visible');
+        }
+
+        function setVideoEffect(effect) {
+            currentEffect = effect;
+            document.querySelectorAll('.effect-option').forEach(el => el.classList.remove('active'));
+            document.getElementById(`eff-${effect}`).classList.add('active');
+            
+            if (effect === 'none') {
+                stopEffectLoop();
+            } else {
+                startEffectLoop();
+            }
+        }
+
+        let effectInterval = null;
+        function startEffectLoop() {
+            if (effectInterval) return;
+            effectInterval = setInterval(async () => {
+                const myVideo = document.getElementById('localVideo');
+                if (myVideo && currentEffect !== 'none') {
+                    await selfieSegmentation.send({ image: myVideo });
+                }
+            }, 40); // ~25 FPS
+        }
+
+        function stopEffectLoop() {
+            if (effectInterval) clearInterval(effectInterval);
+            effectInterval = null;
+            // Revert to raw stream
+            replaceSenderTrack(currentStream.getVideoTracks()[0]);
+        }
+
+        function onSegmentationResults(results) {
+            const myVideo = document.getElementById('localVideo');
+            if (!myVideo) return;
+            
+            processingCanvas.width = myVideo.videoWidth || 640;
+            processingCanvas.height = myVideo.videoHeight || 480;
+            
+            processingCtx.save();
+            processingCtx.clearRect(0, 0, processingCanvas.width, processingCanvas.height);
+            
+            // Draw Masked Content
+            processingCtx.drawImage(results.segmentationMask, 0, 0, processingCanvas.width, processingCanvas.height);
+            
+            // Draw Background
+            processingCtx.globalCompositeOperation = 'source-out';
+            if (currentEffect === 'blur') {
+                processingCtx.filter = 'blur(15px)';
+                processingCtx.drawImage(results.image, 0, 0, processingCanvas.width, processingCanvas.height);
+                processingCtx.filter = 'none';
+            } else if (bgImages[currentEffect]) {
+                processingCtx.drawImage(bgImages[currentEffect], 0, 0, processingCanvas.width, processingCanvas.height);
+            }
+            
+            // Draw Foreground (User)
+            processingCtx.globalCompositeOperation = 'destination-atop';
+            processingCtx.drawImage(results.image, 0, 0, processingCanvas.width, processingCanvas.height);
+            
+            processingCtx.restore();
+            
+            // If outputStream not yet created, create it
+            if (!outputStream && processingCanvas) {
+                outputStream = processingCanvas.captureStream(25);
+                replaceSenderTrack(outputStream.getVideoTracks()[0]);
+            }
+        }
+
+        function replaceSenderTrack(newTrack) {
+            peers.forEach(pc => {
+                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                if (sender) sender.replaceTrack(newTrack);
+            });
         }
 
         init();
+
+        async function processEarlyCandidates(socketId, pc) {
+            if (earlyCandidates.has(socketId)) {
+                for (let c of earlyCandidates.get(socketId)) {
+                    try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (e) { console.warn('Queued ICE error:', e); }
+                }
+                earlyCandidates.delete(socketId);
+            }
+        }
 
         // ===== SOCKET HANDLERS =====
         function setupSocketHandlers() {
@@ -1577,19 +1942,24 @@
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
                 socket.emit('webrtc-answer', { roomId, to: from, answer });
+                processEarlyCandidates(from, pc);
             });
 
             socket.on('webrtc-answer', async ({ from, answer }) => {
                 const pc = peers.get(from);
                 if (pc) {
                     await pc.setRemoteDescription(new RTCSessionDescription(answer));
+                    processEarlyCandidates(from, pc);
                 }
             });
 
             socket.on('webrtc-ice', async ({ from, candidate }) => {
                 const pc = peers.get(from);
-                if (pc && candidate) {
+                if (pc && pc.remoteDescription && pc.remoteDescription.type) {
                     try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { }
+                } else {
+                    if (!earlyCandidates.has(from)) earlyCandidates.set(from, []);
+                    earlyCandidates.get(from).push(candidate);
                 }
             });
 
@@ -1616,8 +1986,20 @@
                 setTimeout(() => location.href = '/video.html', 3000);
             });
 
+            socket.on('match-accepted', ({ roomId: newRoomId, partnerUser }) => {
+                showNotif('🚀 Connecting to next partner...');
+                sessionStorage.setItem('matchedPartner', JSON.stringify(partnerUser || {}));
+                location.href = `/call.html?room=${encodeURIComponent(newRoomId)}`;
+            });
+
+            socket.on('no-partners-available', () => {
+                showNotif('🏜️ No one available to skip to. Returning to lobby.');
+                setTimeout(() => location.href = '/video.html', 2000);
+            });
+
             socket.on('disconnect', () => {
-                showNotif('🔌 Disconnected from server');
+                showNotif('Disconnection: Turning to lobby...');
+                setTimeout(() => location.href = '/video.html', 3000);
             });
 
             // A peer left the call
@@ -1636,12 +2018,30 @@
 
             // Add local tracks
             if (currentStream) {
-                currentStream.getTracks().forEach(track => pc.addTrack(track, currentStream));
+                currentStream.getTracks().forEach(track => {
+                    // If video effect is active, use the outputStream track instead
+                    if (track.kind === 'video' && outputStream) {
+                        pc.addTrack(outputStream.getVideoTracks()[0], outputStream);
+                    } else {
+                        pc.addTrack(track, currentStream);
+                    }
+                });
             }
 
             // Receive remote tracks
             pc.ontrack = (event) => {
-                addRemoteVideo(targetSocketId, event.streams[0], partnerUser);
+                const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
+                addRemoteVideo(targetSocketId, stream, partnerUser);
+                
+                // For some browsers (Safari), we must re-assign srcObject if track is added later
+                const videoWrap = document.getElementById(`video-${targetSocketId}`);
+                if (videoWrap) {
+                    const videoEl = videoWrap.querySelector('video');
+                    if (videoEl && videoEl.srcObject !== stream) {
+                        videoEl.srcObject = stream;
+                    }
+                }
+                
                 document.getElementById('waitingOverlay').style.display = 'none';
                 startCallTimer();
             };
@@ -1669,9 +2069,45 @@
             wrap.id = `video-${socketId}`;
 
             const video = document.createElement('video');
-            video.autoplay = true;
             video.playsInline = true;
             video.srcObject = stream;
+            
+            // For AI Moderation loop
+            if (!document.getElementById('partnerVideo')) {
+                video.id = 'partnerVideo';
+            }
+            
+            const playOverlay = document.createElement('div');
+            playOverlay.style.position = 'absolute';
+            playOverlay.style.inset = '0';
+            playOverlay.style.display = 'none';
+            playOverlay.style.alignItems = 'center';
+            playOverlay.style.justifyContent = 'center';
+            playOverlay.style.background = 'rgba(0,0,0,0.7)';
+            playOverlay.style.zIndex = '30';
+            
+            const playBtn = document.createElement('button');
+            playBtn.innerHTML = '<i class="fas fa-play"></i> Click to Play Video';
+            playBtn.style.padding = '12px 24px';
+            playBtn.style.borderRadius = '24px';
+            playBtn.style.background = 'var(--accent)';
+            playBtn.style.color = '#fff';
+            playBtn.style.border = 'none';
+            playBtn.style.fontSize = '14px';
+            playBtn.style.cursor = 'pointer';
+            playBtn.style.fontWeight = 'bold';
+            
+            playBtn.onclick = () => {
+                video.play();
+                playOverlay.style.display = 'none';
+            };
+            playOverlay.appendChild(playBtn);
+            
+            video.onloadedmetadata = () => {
+                video.play().catch(e => {
+                    playOverlay.style.display = 'flex';
+                });
+            };
 
             const overlay = document.createElement('div');
             overlay.className = 'peer-overlay';
@@ -1692,6 +2128,7 @@
             overlay.appendChild(nameSpan);
             overlay.appendChild(addBtn);
             wrap.appendChild(video);
+            wrap.appendChild(playOverlay);
             wrap.appendChild(overlay);
             grid.appendChild(wrap);
 
@@ -1839,18 +2276,125 @@
             }
         }
 
-        function endCall() {
-            document.getElementById('endConfirmOverlay').classList.add('visible');
+        // ===== RATING SYSTEM =====
+        let selectedStars = 0;
+        let hasHeart = false;
+        let pendingRatingTarget = null;
+        let ratingRedirectUrl = null;
+
+        document.querySelectorAll('.star-picker i').forEach(star => {
+            star.onclick = () => {
+                selectedStars = parseInt(star.dataset.value);
+                updateStarsUI();
+            };
+            star.onmouseenter = () => highlightStars(parseInt(star.dataset.value));
+            star.onmouseleave = () => highlightStars(selectedStars);
+        });
+
+        function highlightStars(val) {
+            document.querySelectorAll('.star-picker i').forEach(s => {
+                s.classList.toggle('active', parseInt(s.dataset.value) <= val);
+            });
         }
 
-        function confirmEndCall() {
+        function updateStarsUI() {
+            highlightStars(selectedStars);
+        }
+
+        document.getElementById('heartToggle').onclick = () => {
+            hasHeart = !hasHeart;
+            document.getElementById('heartToggle').classList.toggle('active', hasHeart);
+        };
+
+        function showRatingModal(targetUser, nextUrl = null) {
+            if (!targetUser || !targetUser._id || targetUser._id.startsWith('guest-')) {
+                if (nextUrl) location.href = nextUrl;
+                return;
+            }
+            
+            pendingRatingTarget = targetUser._id;
+            ratingRedirectUrl = nextUrl;
+            
+            document.getElementById('ratingPartnerName').textContent = targetUser.name || 'Partner';
+            if (targetUser.avatar) {
+                document.getElementById('ratingAvatar').innerHTML = `<img src="${targetUser.avatar}" style="width:100%;height:100%;object-fit:cover;">`;
+            } else {
+                document.getElementById('ratingAvatar').textContent = '👤';
+            }
+            
+            // Reset modal state
+            selectedStars = 0;
+            hasHeart = false;
+            updateStarsUI();
+            document.getElementById('heartToggle').classList.remove('active');
+            
+            document.getElementById('ratingOverlay').classList.add('visible');
+        }
+
+        function submitRating() {
+            if (selectedStars === 0) {
+                showNotif('⭐ Please select stars to rate!');
+                return;
+            }
+            
+            socket.emit('rate-user', {
+                targetUserId: pendingRatingTarget,
+                stars: selectedStars,
+                liked: hasHeart
+            });
+            
+            showNotif('💖 Feedback submitted!');
+            
+            if (ratingRedirectUrl) {
+                exitCallAndCleanup(ratingRedirectUrl);
+            } else {
+                // If it was just a manual rating during call (not implemented yet, but for safety)
+                document.getElementById('ratingOverlay').classList.remove('visible');
+            }
+        }
+
+        function closeRatingModal(isSkipped) {
+            document.getElementById('ratingOverlay').classList.remove('visible');
+            if (ratingRedirectUrl) {
+                exitCallAndCleanup(ratingRedirectUrl);
+            }
+        }
+
+        function exitCallAndCleanup(url) {
             if (currentStream) currentStream.getTracks().forEach(t => t.stop());
             if (screenStream) screenStream.getTracks().forEach(t => t.stop());
             peers.forEach(pc => pc.close());
             peers.clear();
-            socket.disconnect();
+            if (socket) socket.disconnect();
             sessionStorage.removeItem('matchedPartner');
-            window.location.href = '/video.html?returning=1';
+            if (url) location.href = url;
+        }
+
+        function skipMatch() {
+            if (matchedPartner) {
+                // Modified skip: show rating first, then redirect in background?
+                // Actually, skip should be fast. I'll just emit skip-call and also show rating?
+                // Better: Show rating modal first, and "Submit" will trigger the redirect.
+                showRatingModal(matchedPartner);
+                
+                // We'll use a special flag for skip-and-match
+                document.getElementById('submitRatingBtn').onclick = () => {
+                    socket.emit('rate-user', {
+                        targetUserId: pendingRatingTarget,
+                        stars: selectedStars,
+                        liked: hasHeart
+                    });
+                    socket.emit('skip-call', { roomId });
+                    document.getElementById('ratingOverlay').classList.remove('visible');
+                    showNotif('⏭️ Finding next match...');
+                };
+            } else {
+                socket.emit('skip-call', { roomId });
+            }
+        }
+
+        function confirmEndCall() {
+            showRatingModal(matchedPartner, '/video.html?returning=1');
         }
 
         function cancelEndCall() {
@@ -1858,13 +2402,11 @@
         }
 
         function returnToLobby() {
-            if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-            if (screenStream) screenStream.getTracks().forEach(t => t.stop());
-            peers.forEach(pc => pc.close());
-            peers.clear();
-            socket.disconnect();
-            sessionStorage.removeItem('matchedPartner');
-            window.location.href = '/video.html?returning=1';
+            if (matchedPartner) {
+                showRatingModal(matchedPartner, '/video.html?returning=1');
+            } else {
+                location.href = '/video.html';
+            }
         }
 
         function closePartnerLeftOverlay() {
@@ -2113,14 +2655,16 @@
                     }
                 }
 
-                // Show interim text immediately
+                // Use a debounce-like behavior for interim text to prevent flickering
                 if (interim) {
                     showSubtitle(interim, null, true);
                 }
 
-                // Process final text for translation
+                // Process final text for translation with a slight delay if rapid
                 if (final.trim()) {
-                    processTranslation(final.trim());
+                    const textToTranslate = final.trim();
+                    // Optional: could add some local sanity checks here
+                    processTranslation(textToTranslate);
                 }
             };
 

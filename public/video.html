@@ -260,6 +260,24 @@
             margin: 2px 2px 0 0;
         }
 
+        /* Rating display styles */
+        .rating-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .rating-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+        }
+        .rating-stars { color: #f59e0b; }
+        .rating-hearts { color: #ef4444; }
+        .rating-count { color: var(--muted); font-weight: 400; font-size: 11px; }
+
         /* Center: People Grid */
         .people-center {
             flex: 1;
@@ -313,12 +331,33 @@
             justify-content: center;
             font-size: 40px;
             overflow: hidden;
+            position: relative;
         }
-        .person-avatar-wrap img {
+
+        /* Timer SVG Styles */
+        .timer-svg {
+            position: absolute;
+            inset: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            transform: rotate(-90deg);
+            pointer-events: none;
+            z-index: 10;
         }
+        .timer-circle-bg {
+            fill: none;
+            stroke: rgba(255,255,255,0.05);
+            stroke-width: 4;
+        }
+        .timer-circle-fg {
+            fill: none;
+            stroke-width: 4;
+            stroke-linecap: round;
+            transition: stroke 0.3s, stroke-dashoffset 0.1s linear;
+        }
+        .timer-green { stroke: var(--success); }
+        .timer-red { stroke: var(--danger); }
+
         .person-info { padding: 12px; }
         .person-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
         .person-country { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
@@ -740,6 +779,51 @@
         }
         .side-btn.has-new::after { display: block; }
 
+        /* History Item Styles */
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid transparent;
+            cursor: pointer;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+        .history-item:hover {
+            background: rgba(124, 92, 252, 0.08);
+            border-color: rgba(124, 92, 252, 0.2);
+            transform: translateX(4px);
+        }
+        .history-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--surface2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            overflow: hidden;
+            position: relative;
+        }
+        .history-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .history-info { flex: 1; min-width: 0; }
+        .history-name-row { display: flex; justify-content: space-between; align-items: center; }
+        .history-name { font-weight: 600; font-size: 14px; color: var(--text); }
+        .history-time { font-size: 10px; color: var(--muted); }
+        .history-preview {
+            font-size: 12px;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+
         @keyframes particleFall {
             0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
             100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
@@ -809,7 +893,11 @@
                             <i class="fas fa-camera"></i>
                         </button>
                     </div>
-                    <div id="myTagsWrap"></div>
+                    <div class="rating-row" id="myRatingRow">
+                        <div class="rating-item rating-stars"><i class="fas fa-star"></i> <span id="myStars">0</span> <span class="rating-count" id="myRatingCount">(0)</span></div>
+                        <div class="rating-item rating-hearts"><i class="fas fa-heart"></i> <span id="myHearts">0</span></div>
+                    </div>
+                    <div id="myTagsWrap" style="margin-top:10px;"></div>
                 </div>
             </div>
         </div>
@@ -846,6 +934,11 @@
         <div style="margin-top:24px;">
             <div class="section-label">Friends</div>
             <div id="friendList"></div>
+        </div>
+
+        <div style="margin-top:24px;">
+            <div class="section-label">Recent History</div>
+            <div id="historyList"></div>
         </div>
     </div>
 
@@ -1111,8 +1204,21 @@
         // Join lobby
         socket.emit('lobby-join', user);
 
+        // Display my stats if available
+        if (user.stars_count) {
+            const avg = (user.stars_total / user.stars_count).toFixed(1);
+            document.getElementById('myStars').textContent = avg;
+            document.getElementById('myRatingCount').textContent = `(${user.stars_count})`;
+        }
+        if (user.hearts_count) {
+            document.getElementById('myHearts').textContent = user.hearts_count;
+        }
+
         // Listen for lobby users list
-        socket.on('lobby-users', (users) => renderPeopleGrid(users));
+        socket.on('lobby-users', (users) => {
+            window.currentLobbyUsers = users;
+            renderPeopleGrid(users);
+        });
 
         // Listen for match requests
         socket.on('match-request', ({ fromSocketId, fromUser }) => {
@@ -1146,8 +1252,12 @@
         const grid = document.getElementById('peopleGrid');
         const onlineBadge = document.getElementById('onlineBadge');
 
-        // Filter out self
-        const others = users.filter(u => u.socketId !== socket.id);
+        // Clean up previous timers
+        activeTimers.forEach(id => clearInterval(id));
+        activeTimers.clear();
+
+        // Filter out self AND skipped users
+        const others = users.filter(u => u.socketId !== socket.id && !localSkippedUsers.has(u.socketId));
         onlineBadge.textContent = others.length + ' online';
 
         if (others.length === 0) {
@@ -1166,20 +1276,104 @@
                 : `👤`;
 
             const tags = (u.interests || []).slice(0, 3).map(i => `<span class="person-tag">${i}</span>`).join('');
+            
+            const avgStars = u.stars_count > 0 ? (u.stars_total / u.stars_count).toFixed(1) : '0';
+            const starsCount = u.stars_count || 0;
+            const heartsCount = u.hearts_count || 0;
+
+            const radius = 35; 
+            const circumference = 2 * Math.PI * radius;
 
             card.innerHTML = `
-                <div class="person-avatar-wrap">${avatarContent}</div>
+                <div class="person-avatar-wrap">
+                    ${avatarContent}
+                    <svg class="timer-svg" viewBox="0 0 80 80">
+                        <circle class="timer-circle-bg" cx="40" cy="40" r="${radius}"></circle>
+                        <circle class="timer-circle-fg timer-green" id="timer-${u.socketId}" 
+                            cx="40" cy="40" r="${radius}" 
+                            stroke-dasharray="${circumference}" 
+                            stroke-dashoffset="0"></circle>
+                    </svg>
+                </div>
                 <div class="person-info">
                     <div class="person-name">${u.name}</div>
+                    <div class="rating-row">
+                        <div class="rating-item rating-stars"><i class="fas fa-star"></i> ${avgStars} <span class="rating-count">(${starsCount})</span></div>
+                        <div class="rating-item rating-hearts"><i class="fas fa-heart"></i> ${heartsCount}</div>
+                    </div>
                     <div class="person-country">${u.country || 'Unknown'}</div>
                     <div class="person-interests">${tags}</div>
-                    <button class="match-btn" onclick="sendMatchRequest('${u.socketId}', this)" data-sid="${u.socketId}">
+                    <button class="match-btn" id="match-btn-${u.socketId}" onclick="sendMatchRequest('${u.socketId}', this)" data-sid="${u.socketId}">
                         <i class="fas fa-video"></i> Match
                     </button>
                 </div>
             `;
             grid.appendChild(card);
+            startCardTimer(u.socketId);
         });
+    }
+
+    // ===== AUTO-SKIP TIMER LOGIC =====
+    let activeTimers = new Map();
+    let localSkippedUsers = new Set();
+
+    function startCardTimer(socketId) {
+        if (activeTimers.has(socketId)) clearInterval(activeTimers.get(socketId));
+        
+        const duration = 10000; // 10 seconds
+        let remaining = duration;
+        const interval = 100; // 100ms updates
+        const circle = document.getElementById(`timer-${socketId}`);
+        if (!circle) return;
+
+        const radius = 35;
+        const circumference = 2 * Math.PI * radius;
+
+        const timerId = setInterval(() => {
+            remaining -= interval;
+            
+            if (remaining <= 0) {
+                clearInterval(timerId);
+                activeTimers.delete(socketId);
+                autoSkipUser(socketId);
+                return;
+            }
+
+            // Update UI
+            const offset = circumference - (remaining / duration) * circumference;
+            circle.style.strokeDashoffset = offset;
+
+            // Update Color
+            if (remaining <= 5000) {
+                circle.classList.remove('timer-green');
+                circle.classList.add('timer-red');
+            }
+        }, interval);
+
+        activeTimers.set(socketId, timerId);
+    }
+
+    function autoSkipUser(socketId) {
+        // Add to skipped list temporarily
+        localSkippedUsers.add(socketId);
+        
+        // Remove card with animation
+        const card = document.querySelector(`.person-card[data-socket-id="${socketId}"]`);
+        if (card) {
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.8)';
+            setTimeout(() => {
+                // If there were many users, we could re-render to pick a new one.
+                // For now, let's just trigger a grid refresh that respects the skipped list.
+                // Re-obtaining current list from global state (we might need a global store of users)
+                if (window.currentLobbyUsers) {
+                    renderPeopleGrid(window.currentLobbyUsers);
+                }
+            }, 300);
+        }
+
+        // Remove from skipped list after 30 seconds so they can reappear
+        setTimeout(() => localSkippedUsers.delete(socketId), 30000);
     }
 
     function sendMatchRequest(targetSocketId, btn) {
@@ -1274,23 +1468,10 @@
         overlay.classList.add('visible');
         spawnParticles();
 
-        // Countdown 3 → 2 → 1 → Go!
-        let count = 3;
-        const countEl = document.getElementById('celebCountdown');
-        countEl.textContent = count;
-
-        const countInterval = setInterval(() => {
-            count--;
-            if (count > 0) {
-                countEl.textContent = count;
-            } else {
-                countEl.textContent = '🚀';
-                clearInterval(countInterval);
-                setTimeout(() => {
-                    window.location.href = `/call.html?room=${encodeURIComponent(roomId)}`;
-                }, 500);
-            }
-        }, 1000);
+        // Instant redirect — no more countdown
+        setTimeout(() => {
+            window.location.href = `/call.html?room=${encodeURIComponent(roomId)}`;
+        }, 800);
     }
 
     function spawnParticles() {
@@ -1338,8 +1519,103 @@
 
     function fetchSocialData() {
         socket.emit('get-friend-list');
-        // We also need pending requests - I'll modify server.js to send them with friend list or separately
-        // Actually, let's just use the server event we added
+        socket.emit('get-pending-requests');
+        socket.emit('get-recent-chats');
+    }
+
+    socket.on('recent-chats', (list) => {
+        renderRecentChats(list);
+    });
+
+    function renderRecentChats(list) {
+        const historyList = document.getElementById('historyList');
+        historyList.innerHTML = '';
+        
+        if (list.length === 0) {
+            historyList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">No heart-to-heart talks yet.</div>';
+            return;
+        }
+
+        list.forEach(chat => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            
+            // Format time
+            const lastDate = new Date(chat.lastMsgTime);
+            const timeStr = lastDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+            item.innerHTML = `
+                <div class="history-avatar">
+                    <img src="${chat.avatar || 'https://via.placeholder.com/44'}" alt="">
+                </div>
+                <div class="history-info">
+                    <div class="history-name-row">
+                        <span class="history-name">${chat.name}</span>
+                        <span class="history-time">${timeStr}</span>
+                    </div>
+                    <div class="history-preview">${chat.lastMsg || 'Sent a message'}</div>
+                </div>
+            `;
+            item.onclick = () => openChat({
+                _id: chat._id,
+                name: chat.name,
+                avatar: chat.avatar,
+                isOnline: false // We don't track online status for history yet
+            });
+            historyList.appendChild(item);
+        });
+    }
+
+    socket.on('pending-requests', (list) => {
+        renderPendingRequests(list);
+    });
+
+    function renderPendingRequests(list) {
+        const pendingList = document.getElementById('pendingList');
+        const section = document.getElementById('pendingRequestsSection');
+        
+        pendingList.innerHTML = '';
+        
+        if (list.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+
+        section.style.display = 'block';
+
+        list.forEach(req => {
+            const item = document.createElement('div');
+            item.className = 'friend-item';
+            
+            item.innerHTML = `
+                <div class="friend-avatar">
+                    <img src="${req.avatar || 'https://via.placeholder.com/44'}" alt="">
+                </div>
+                <div class="friend-info">
+                    <div class="friend-name">${req.name}</div>
+                    <div class="friend-status">${req.country || 'Unknown'}</div>
+                </div>
+                <div style="display:flex;gap:4px;">
+                    <button class="sidebar-btn" onclick="acceptFriend('${req.userId}', event)" style="background:var(--success);color:white;border:none;">✓</button>
+                    <button class="sidebar-btn" onclick="declineFriend('${req.userId}', event)" style="background:var(--surface2);border:none;">✕</button>
+                </div>
+            `;
+            pendingList.appendChild(item);
+        });
+    }
+
+    function acceptFriend(userId, event) {
+        event.stopPropagation();
+        socket.emit('friend-accept', { fromUserId: userId });
+        showNotif("✅ Friend request accepted");
+        setTimeout(fetchSocialData, 300);
+    }
+
+    function declineFriend(userId, event) {
+        event.stopPropagation();
+        socket.emit('friend-decline', { fromUserId: userId });
+        showNotif("Friend request declined");
+        setTimeout(fetchSocialData, 300);
     }
 
     socket.on('friend-list', (list) => {

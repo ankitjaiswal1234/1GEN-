@@ -15,15 +15,17 @@ class User {
         this.country = data.country || 'Unknown';
         this.ipAddress = data.ipAddress || '';
         this.emailVerified = data.emailVerified || 0;
+        this.stars_total = data.stars_total || 0;
+        this.stars_count = data.stars_count || 0;
+        this.hearts_count = data.hearts_count || 0;
     }
 
     // Save user to database
     async save() {
         try {
             const sql = `
-                INSERT OR REPLACE INTO users 
-                (_id, name, email, password, interests, loginCount, lastLogin, loginSessions, createdAt, isActive, country, ipAddress, emailVerified)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT OR REPLACE INTO users (_id, name, email, password, interests, loginCount, lastLogin, loginSessions, createdAt, isActive, country, ipAddress, emailVerified, stars_total, stars_count, hearts_count)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
             
             const params = [
@@ -39,7 +41,10 @@ class User {
                 this.isActive,
                 this.country,
                 this.ipAddress,
-                this.emailVerified || 0
+                this.emailVerified || 0,
+                this.stars_total || 0,
+                this.stars_count || 0,
+                this.hearts_count || 0
             ];
 
             await db.run(sql, params);

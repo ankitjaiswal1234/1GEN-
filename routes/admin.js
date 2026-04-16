@@ -97,12 +97,16 @@ router.post("/admin-login", async (req, res) => {
 // Get All Users (Admin Only)
 router.get("/admin/users", verifyAdmin, async (req, res) => {
     try {
-        const users = await User.find().select("-password");
-        const usersWithStats = users.map(user => ({
-            ...user.toObject(),
-            totalSessions: user.loginSessions.length,
-            lastLoginDate: user.lastLogin
-        }));
+        const users = await User.find();
+        const usersWithStats = users.map(user => {
+            const u = { ...user };
+            delete u.password;
+            return {
+                ...u,
+                totalSessions: (user.loginSessions || []).length,
+                lastLoginDate: user.lastLogin
+            };
+        });
 
         res.json(usersWithStats);
     } catch (error) {
@@ -113,16 +117,19 @@ router.get("/admin/users", verifyAdmin, async (req, res) => {
 // Get User Details with Login Sessions (Admin Only)
 router.get("/admin/users/:userId", verifyAdmin, async (req, res) => {
     try {
-        const user = await User.findById(req.params.userId).select("-password");
+        const user = await User.findById(req.params.userId);
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
+        const u = { ...user };
+        delete u.password;
+
         const userDetails = {
-            ...user.toObject(),
-            totalSessions: user.loginSessions.length,
-            averageSessionDuration: user.loginSessions.length > 0
+            ...u,
+            totalSessions: (user.loginSessions || []).length,
+            averageSessionDuration: (user.loginSessions || []).length > 0
                 ? Math.round(user.loginSessions.reduce((sum, session) => sum + (session.duration || 0), 0) / user.loginSessions.length)
                 : 0,
             lastLoginDate: user.lastLogin,
@@ -138,12 +145,11 @@ router.get("/admin/users/:userId", verifyAdmin, async (req, res) => {
 // Get Dashboard Statistics with Country Data (Admin Only)
 router.get("/admin/dashboard-stats", verifyAdmin, async (req, res) => {
     try {
-        const totalUsers = await User.countDocuments();
-        const activeUsers = await User.countDocuments({ isActive: 1 });
-        const inactiveUsers = totalUsers - activeUsers;
-        
         const users = await User.find();
-
+        const totalUsers = users.length;
+        const activeUsersCount = users.filter(u => u.isActive === 1).length;
+        const inactiveUsersCount = totalUsers - activeUsersCount;
+        
         // Calculate interest breakdown
         const interestCounts = {
             movie: 0,
@@ -154,13 +160,12 @@ router.get("/admin/dashboard-stats", verifyAdmin, async (req, res) => {
         };
 
         users.forEach(user => {
-            if (user.interests && Array.isArray(user.interests)) {
-                user.interests.forEach(interest => {
-                    if (interestCounts.hasOwnProperty(interest)) {
-                        interestCounts[interest]++;
-                    }
-                });
-            }
+            const interests = Array.isArray(user.interests) ? user.interests : [];
+            interests.forEach(interest => {
+                if (interestCounts.hasOwnProperty(interest)) {
+                    interestCounts[interest]++;
+                }
+            });
         });
 
         // Calculate total sessions
@@ -190,8 +195,8 @@ router.get("/admin/dashboard-stats", verifyAdmin, async (req, res) => {
 
         res.json({
             totalUsers,
-            activeUsers,
-            inactiveUsers,
+            activeUsers: activeUsersCount,
+            inactiveUsers: inactiveUsersCount,
             totalLoginSessions,
             avgSessionDuration,
             interestCounts,
@@ -348,9 +353,9 @@ router.get("/admin/user-stats", verifyAdmin, async (req, res) => {
 // Get Dashboard Statistics (Admin Only)
 router.get("/admin/statistics", verifyAdmin, async (req, res) => {
     try {
-        const totalUsers = await User.countDocuments();
-        const activeUsers = await User.countDocuments({ isActive: true });
         const users = await User.find();
+        const totalUsers = users.length;
+        const activeUsersCount = users.filter(u => u.isActive === 1 || u.isActive === true).length;
 
         const interestCounts = {
             movie: 0,
@@ -361,28 +366,30 @@ router.get("/admin/statistics", verifyAdmin, async (req, res) => {
         };
 
         users.forEach(user => {
-            user.interests.forEach(interest => {
+            const interests = Array.isArray(user.interests) ? user.interests : [];
+            interests.forEach(interest => {
                 if (interestCounts.hasOwnProperty(interest)) {
                     interestCounts[interest]++;
                 }
             });
         });
 
-        const totalLoginSessions = users.reduce((sum, user) => sum + user.loginSessions.length, 0);
+        const totalLoginSessions = users.reduce((sum, user) => sum + (user.loginSessions ? user.loginSessions.length : 0), 0);
         const avgSessionDuration = users.length > 0
             ? Math.round(users.reduce((sum, user) => 
-                sum + user.loginSessions.reduce((s, session) => s + (session.duration || 0), 0), 0) / (totalLoginSessions || 1))
+                sum + (user.loginSessions ? user.loginSessions.reduce((s, session) => s + (session.duration || 0), 0) : 0), 0) / (totalLoginSessions || 1))
             : 0;
+
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const usersThisMonth = users.filter(u => new Date(u.createdAt) >= thirtyDaysAgo).length;
 
         res.json({
             totalUsers,
-            activeUsers,
+            activeUsers: activeUsersCount,
             totalLoginSessions,
             avgSessionDuration,
             interestCounts,
-            usersThisMonth: await User.countDocuments({
-                createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
-            })
+            usersThisMonth
         });
     } catch (error) {
         res.status(500).json({ message: "Error fetching statistics", error: error.message });
@@ -483,18 +490,16 @@ router.post("/admin/collect-user-data", async (req, res) => {
 // Get All User Data Collections (Admin Only)
 router.get("/admin/user-data", verifyAdmin, async (req, res) => {
     try {
-        const page = req.query.page || 1;
-        const limit = req.query.limit || 50;
-        const skip = (page - 1) * limit;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        const skipCount = (page - 1) * limit;
 
-        const userDataCollection = await UserData.find()
-            .populate('userId', 'name email')
-            .sort({ timestamp: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        const totalRecords = await UserData.countDocuments();
+        const allUserData = await UserData.find();
+        const totalRecords = allUserData.length;
         const totalPages = Math.ceil(totalRecords / limit);
+
+        // Sorting is already handled in UserData.find() (ORDER BY timestamp DESC)
+        const userDataCollection = allUserData.slice(skipCount, skipCount + limit);
 
         res.json({
             data: userDataCollection,
@@ -550,39 +555,45 @@ router.get("/admin/user-data/user/:userId", verifyAdmin, async (req, res) => {
 // Get User Data Analytics Summary (Admin Only)
 router.get("/admin/user-data/analytics/summary", verifyAdmin, async (req, res) => {
     try {
-        const totalDataPoints = await UserData.countDocuments();
-        const uniqueUsers = await UserData.distinct('userId');
-        const activityTypes = await UserData.distinct('activityType');
+        const allData = await UserData.find();
+        const totalDataPoints = allData.length;
+        
+        // Unique Users
+        const uniqueUserIds = new Set(allData.map(d => d.userId));
+        const activityTypes = Array.from(new Set(allData.map(d => d.activityType)));
 
-        const activities = await UserData.aggregate([
-            {
-                $group: {
-                    _id: "$activityType",
-                    count: { $sum: 1 },
-                    avgDuration: { $avg: "$duration" }
-                }
-            },
-            { $sort: { count: -1 } }
-        ]);
+        // Aggregation for activity types
+        const activityMap = {};
+        allData.forEach(d => {
+            if (!activityMap[d.activityType]) {
+                activityMap[d.activityType] = { _id: d.activityType, count: 0, totalDuration: 0 };
+            }
+            activityMap[d.activityType].count++;
+            activityMap[d.activityType].totalDuration += (d.duration || 0);
+        });
 
-        const dataCategories = await UserData.aggregate([
-            {
-                $group: {
-                    _id: "$dataCategory",
-                    count: { $sum: 1 }
-                }
-            },
-            { $sort: { count: -1 } }
-        ]);
+        const activities = Object.values(activityMap).map(a => ({
+            ...a,
+            avgDuration: Math.round(a.totalDuration / a.count)
+        })).sort((a, b) => b.count - a.count);
 
-        const recentData = await UserData.find()
-            .sort({ timestamp: -1 })
-            .limit(10)
-            .populate('userId', 'name email');
+        // Aggregation for data categories
+        const categoryMap = {};
+        allData.forEach(d => {
+            const category = d.dataCategory || 'Uncategorized';
+            if (!categoryMap[category]) {
+                categoryMap[category] = { _id: category, count: 0 };
+            }
+            categoryMap[category].count++;
+        });
+
+        const dataCategories = Object.values(categoryMap).sort((a, b) => b.count - a.count);
+
+        const recentData = allData.slice(0, 10);
 
         res.json({
             totalDataPoints,
-            uniqueUsers: uniqueUsers.length,
+            uniqueUsers: uniqueUserIds.size,
             activityTypes,
             activities,
             dataCategories,

@@ -318,7 +318,10 @@ async function startServer() {
             name: u.name,
             interests: u.interests,
             avatar: u.avatar || null,
-            country: u.country || 'Unknown'
+            country: u.country || 'Unknown',
+            stars_total: u.stars_total || 0,
+            stars_count: u.stars_count || 0,
+            hearts_count: u.hearts_count || 0
         }));
         io.emit('lobby-users', list);
     }
@@ -333,7 +336,10 @@ async function startServer() {
                 name: user.name,
                 interests: user.interests || [],
                 avatar: user.avatar || null,
-                country: user.country || 'Unknown'
+                country: user.country || 'Unknown',
+                stars_total: user.stars_total || 0,
+                stars_count: user.stars_count || 0,
+                hearts_count: user.hearts_count || 0
             };
             broadcastLobbyUsers();
         });
@@ -503,7 +509,7 @@ async function startServer() {
                 if (!session || !session.userId) return;
 
                 const sql = `
-                    SELECT u._id, u.name, u.interests, u.country 
+                    SELECT u._id, u.name, u.interests, u.country, u.avatar 
                     FROM users u
                     JOIN friends f ON (f.requesterId = u._id OR f.recipientId = u._id)
                     WHERE (f.requesterId = ? OR f.recipientId = ?) 
@@ -520,6 +526,68 @@ async function startServer() {
                 socket.emit("friend-list", list);
             } catch (err) {
                 console.error("Get friends error:", err);
+            }
+        });
+
+        socket.on("get-pending-requests", async () => {
+            try {
+                const session = userSessions[socket.id];
+                if (!session || !session.userId) return;
+
+                const sql = `
+                    SELECT f._id as requestId, u._id as userId, u.name, u.avatar, u.country
+                    FROM friends f
+                    JOIN users u ON f.requesterId = u._id
+                    WHERE f.recipientId = ? AND f.status = 'pending'
+                `;
+                const pending = await database.all(sql, [session.userId]);
+                socket.emit("pending-requests", pending);
+            } catch (err) {
+                console.error("Get pending requests error:", err);
+            }
+        });
+
+        socket.on("friend-decline", async ({ fromUserId }) => {
+            try {
+                const session = userSessions[socket.id];
+                if (!session || !session.userId) return;
+                await database.run(
+                    'DELETE FROM friends WHERE requesterId = ? AND recipientId = ? AND status = ?',
+                    [fromUserId, session.userId, 'pending']
+                );
+            } catch (err) {
+                console.error("Friend decline error:", err);
+            }
+        });
+
+        socket.on("get-recent-chats", async () => {
+            try {
+                const session = userSessions[socket.id];
+                if (!session || !session.userId) return;
+
+                const sql = `
+                    WITH ChatPartners AS (
+                        SELECT 
+                            CASE WHEN senderId = ? THEN receiverId ELSE senderId END as partnerId,
+                            MAX(timestamp) as lastMsgTime
+                        FROM messages
+                        WHERE senderId = ? OR receiverId = ?
+                        GROUP BY partnerId
+                    )
+                    SELECT cp.partnerId as _id, u.name, u.avatar, u.country, cp.lastMsgTime,
+                    (SELECT text FROM messages WHERE (senderId = ? AND receiverId = u._id) OR (senderId = u._id AND receiverId = ?) ORDER BY timestamp DESC LIMIT 1) as lastMsg
+                    FROM ChatPartners cp
+                    JOIN users u ON cp.partnerId = u._id
+                    ORDER BY cp.lastMsgTime DESC
+                    LIMIT 20
+                `;
+                const chats = await database.all(sql, [
+                    session.userId, session.userId, session.userId,
+                    session.userId, session.userId
+                ]);
+                socket.emit("recent-chats", chats);
+            } catch (err) {
+                console.error("Get recent chats error:", err);
             }
         });
 
@@ -561,6 +629,66 @@ async function startServer() {
                 }
             } catch (err) {
                 console.error("Direct message error:", err);
+            }
+        });
+
+        socket.on("skip-call", ({ roomId }) => {
+            // Remove user from room
+            socket.leave(roomId);
+            if (userSessions[socket.id]) {
+                delete userSessions[socket.id].roomId;
+            }
+            
+            // Notify others
+            socket.to(roomId).emit("peer-left", { socketId: socket.id, name: userSessions[socket.id]?.user?.name || 'Partner' });
+
+            // Automatically try to match them with someone in the lobby
+            const potentialPartners = Object.values(lobbyUsers).filter(u => u.socketId !== socket.id);
+            if (potentialPartners.length > 0) {
+                const partner = potentialPartners[Math.floor(Math.random() * potentialPartners.length)];
+                const newRoomId = 'room_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                
+                // Redirect skipper
+                socket.emit("match-accepted", { roomId: newRoomId, partnerUser: partner });
+                
+                // Redirect partner (they don't need a toast for "Skip" connectivity, we just auto-match them if they are in lobby)
+                const partnerSocket = io.sockets.sockets.get(partner.socketId);
+                if (partnerSocket) {
+                    delete lobbyUsers[partner.socketId];
+                    broadcastLobbyUsers();
+                    partnerSocket.emit("match-accepted", { roomId: newRoomId, partnerUser: userSessions[socket.id].user });
+                }
+            } else {
+                // No one available, send them back to lobby
+                socket.emit("no-partners-available");
+            }
+        });
+
+        socket.on("rate-user", async ({ targetUserId, stars, liked }) => {
+            try {
+                const target = await User.findById(targetUserId);
+                if (!target) return;
+
+                target.stars_total = (target.stars_total || 0) + (stars || 0);
+                target.stars_count = (target.stars_count || 0) + 1;
+                if (liked) {
+                    target.hearts_count = (target.hearts_count || 0) + 1;
+                }
+
+                await target.save();
+
+                // Update lobby data if user is there
+                for (let sid in lobbyUsers) {
+                    if (lobbyUsers[sid].userId === targetUserId) {
+                        lobbyUsers[sid].stars_total = target.stars_total;
+                        lobbyUsers[sid].stars_count = target.stars_count;
+                        lobbyUsers[sid].hearts_count = target.hearts_count;
+                        break;
+                    }
+                }
+                broadcastLobbyUsers();
+            } catch (err) {
+                console.error("Rate user error:", err);
             }
         });
 

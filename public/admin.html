@@ -682,7 +682,7 @@
         // Load user statistics
         async function loadUserStats() {
             try {
-                const response = await fetch('/api/user-stats', {
+                const response = await fetch('/api/admin/user-stats', {
                     headers: {
                         'Authorization': `Bearer ${adminToken}`
                     }
@@ -743,7 +743,7 @@
         // Load country statistics
         async function loadCountryStats() {
             try {
-                const response = await fetch('/api/country-stats', {
+                const response = await fetch('/api/admin/country-stats', {
                     headers: {
                         'Authorization': `Bearer ${adminToken}`
                     }

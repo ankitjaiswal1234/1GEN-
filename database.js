@@ -57,7 +57,10 @@ function initializeTables() {
                 isActive INTEGER DEFAULT 1,
                 country TEXT DEFAULT 'Unknown',
                 ipAddress TEXT,
-                emailVerified INTEGER DEFAULT 0
+                emailVerified INTEGER DEFAULT 0,
+                stars_total INTEGER DEFAULT 0,
+                stars_count INTEGER DEFAULT 0,
+                hearts_count INTEGER DEFAULT 0
             )
         `, (err) => {
             if (err) console.error('Error creating users table:', err);
@@ -178,6 +181,13 @@ function initializeTables() {
             else console.log('✓ Friends table ready');
             tableReady();
         });
+
+        // Migrations for existing databases
+        db.serialize(() => {
+            db.run("ALTER TABLE users ADD COLUMN stars_total INTEGER DEFAULT 0", (err) => {});
+            db.run("ALTER TABLE users ADD COLUMN stars_count INTEGER DEFAULT 0", (err) => {});
+            db.run("ALTER TABLE users ADD COLUMN hearts_count INTEGER DEFAULT 0", (err) => {});
+        });
     });
 }
 
@@ -196,8 +206,8 @@ async function createDefaultAdmin() {
 
         if (result.count === 0) {
             // Create default admin
-            const adminEmail = 'PEATALLEN23@GMAIL.COM';
-            const adminPassword = '123qweasE@ADMIN';
+            const adminEmail = 'abc@gmail.com';
+            const adminPassword = '123456';
             const hash = await bcrypt.hash(adminPassword, 10);
             const adminId = 'admin_' + Date.now();
 
