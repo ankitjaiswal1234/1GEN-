@@ -32,7 +32,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
 function initializeTables() {
     return new Promise(async (resolve) => {
         let tablesCreated = 0;
-        const totalTables = 7;
+        const totalTables = 8;
         
         // Helper function to mark table creation
         const tableReady = () => {
@@ -159,6 +159,23 @@ function initializeTables() {
         `, (err) => {
             if (err) console.error('Error creating messages table:', err);
             else console.log('✓ Messages table ready');
+            tableReady();
+        });
+
+        // Friends table
+        db.run(`
+            CREATE TABLE IF NOT EXISTS friends (
+                _id TEXT PRIMARY KEY,
+                requesterId TEXT NOT NULL,
+                recipientId TEXT NOT NULL,
+                status TEXT DEFAULT 'pending', 
+                createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(requesterId) REFERENCES users(_id),
+                FOREIGN KEY(recipientId) REFERENCES users(_id)
+            )
+        `, (err) => {
+            if (err) console.error('Error creating friends table:', err);
+            else console.log('✓ Friends table ready');
             tableReady();
         });
     });

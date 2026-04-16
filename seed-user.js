@@ -7,12 +7,12 @@ async function createUser() {
     try {
         console.log('Waiting for database...');
         await database.waitForReady();
-        
+
         const email = 'ankitjaiswalupd@gmail.com';
         const rawPassword = '123qweasE@';
 
 
-        const existing = await User.findOne({email});
+        const existing = await User.findOne({ email });
         if (existing) {
             console.log('User already exists. Updating password and verifying email...');
             const hash = await bcrypt.hash(rawPassword, 10);
@@ -32,7 +32,7 @@ async function createUser() {
             });
             console.log('User created successfully.');
         }
-    } catch(err) {
+    } catch (err) {
         console.error('Error seeding user:', err);
     } finally {
         // Give SQLite a moment to flush writes

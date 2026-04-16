@@ -1,17 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Call – 1GEN CHAT BY AI</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --bg: #0a0a0c;
             --surface: #141416;
             --surface2: #1e1e22;
-            --border: rgba(255,255,255,0.08);
+            --border: rgba(255, 255, 255, 0.08);
             --accent: #7c5cfc;
             --accent2: #a78bfa;
             --danger: #ef4444;
@@ -20,7 +22,11 @@
             --muted: #6b7080;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             font-family: 'Inter', sans-serif;
@@ -35,7 +41,7 @@
         /* ===== TOP NAV ===== */
         .top-nav {
             height: 52px;
-            background: rgba(10,10,12,0.95);
+            background: rgba(10, 10, 12, 0.95);
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
@@ -45,9 +51,24 @@
             backdrop-filter: blur(20px);
             z-index: 200;
         }
-        .nav-brand { font-weight: 800; font-size: 16px; color: var(--accent2); }
-        .nav-room { font-size: 12px; color: var(--muted); font-family: monospace; }
-        .nav-timer { font-size: 13px; color: var(--muted); font-weight: 600; }
+
+        .nav-brand {
+            font-weight: 800;
+            font-size: 16px;
+            color: var(--accent2);
+        }
+
+        .nav-room {
+            font-size: 12px;
+            color: var(--muted);
+            font-family: monospace;
+        }
+
+        .nav-timer {
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 600;
+        }
 
         /* ===== MAIN LAYOUT ===== */
         .call-layout {
@@ -84,6 +105,7 @@
             gap: 16px;
             background: #000;
         }
+
         .waiting-avatar {
             width: 80px;
             height: 80px;
@@ -96,22 +118,112 @@
             border: 2px solid var(--accent);
             animation: pulse-border 2s infinite;
         }
-        @keyframes pulse-border {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(124,92,252,0.5); }
-            50% { box-shadow: 0 0 0 16px rgba(124,92,252,0); }
-        }
-        .waiting-text { color: var(--muted); font-size: 16px; }
 
-        /* Partner info overlay */
-        .partner-info-overlay {
+        @keyframes pulse-border {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(124, 92, 252, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 0 16px rgba(124, 92, 252, 0);
+            }
+        }
+
+        .waiting-text {
+            color: var(--muted);
+            font-size: 16px;
+        }
+
+        /* Partner info overlays (now one per remote video) */
+        .peer-overlay {
             position: absolute;
-            bottom: 0; left: 0; right: 0;
-            padding: 20px 24px;
-            background: linear-gradient(transparent, rgba(0,0,0,0.85));
+            bottom: 12px;
+            left: 12px;
+            right: 12px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .remote-video-wrap:hover .peer-overlay {
+            opacity: 1;
+        }
+
+        .peer-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .add-friend-btn {
+            background: var(--accent);
+            border: none;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: transform 0.2s;
+        }
+
+        .add-friend-btn:hover {
+            transform: scale(1.1);
+            background: var(--accent2);
+        }
+
+        /* Video Grid Layouts */
+        .video-grid {
+            display: grid;
+            width: 100%;
+            height: 100%;
+            gap: 12px;
+            padding: 12px;
+            background: #000;
+        }
+
+        .remote-video-wrap {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            background: var(--surface);
+            border: 1px solid var(--border);
+        }
+
+        .remote-video-wrap video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* 1 remote peer */
+        .video-grid.grid-1 { grid-template-columns: 1fr; }
+        /* 2 remote peers */
+        .video-grid.grid-2 { grid-template-columns: 1fr 1fr; }
+        /* 3 remote peers */
+        .video-grid.grid-3 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+        .video-grid.grid-3 div:nth-child(1) { grid-column: span 2; }
+        /* 4 remote peers */
+        .video-grid.grid-4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+
+        .partner-info-overlay {
             display: none;
         }
-        .partner-name { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
-        .partner-meta { font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 8px; }
 
         /* Partner interest tags */
         .partner-tags {
@@ -119,9 +231,10 @@
             gap: 6px;
             flex-wrap: wrap;
         }
+
         .partner-tag {
-            background: rgba(124,92,252,0.25);
-            border: 1px solid rgba(124,92,252,0.4);
+            background: rgba(124, 92, 252, 0.25);
+            border: 1px solid rgba(124, 92, 252, 0.4);
             color: #c4b5fd;
             padding: 3px 10px;
             border-radius: 10px;
@@ -140,26 +253,32 @@
             background: var(--surface);
             border-radius: 12px;
             overflow: hidden;
-            border: 2px solid rgba(255,255,255,0.15);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
             cursor: grab;
             z-index: 50;
             transition: border-color 0.2s;
         }
-        .pip:hover { border-color: var(--accent); }
+
+        .pip:hover {
+            border-color: var(--accent);
+        }
+
         .pip video {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
+
         .pip-label {
             position: absolute;
             bottom: 6px;
             left: 8px;
             font-size: 11px;
-            color: rgba(255,255,255,0.7);
+            color: rgba(255, 255, 255, 0.7);
             font-weight: 500;
         }
+
         .cam-off-overlay {
             position: absolute;
             inset: 0;
@@ -180,7 +299,10 @@
             display: flex;
             flex-direction: column;
         }
-        .chat-panel.open { width: 340px; }
+
+        .chat-panel.open {
+            width: 340px;
+        }
 
         .chat-header {
             padding: 16px 18px;
@@ -190,8 +312,19 @@
             justify-content: space-between;
             flex-shrink: 0;
         }
-        .chat-title { font-weight: 700; font-size: 15px; }
-        .chat-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; }
+
+        .chat-title {
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .chat-close {
+            background: none;
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 16px;
+        }
 
         .messages {
             flex: 1;
@@ -201,8 +334,15 @@
             flex-direction: column;
             gap: 10px;
         }
-        .messages::-webkit-scrollbar { width: 3px; }
-        .messages::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+
+        .messages::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: var(--surface2);
+            border-radius: 3px;
+        }
 
         .msg {
             max-width: 80%;
@@ -212,19 +352,26 @@
             line-height: 1.5;
             word-break: break-word;
         }
+
         .msg.sent {
             background: linear-gradient(135deg, #7c5cfc, #a78bfa);
             color: white;
             align-self: flex-end;
             border-bottom-right-radius: 4px;
         }
+
         .msg.received {
             background: var(--surface2);
             color: var(--text);
             align-self: flex-start;
             border-bottom-left-radius: 4px;
         }
-        .msg-time { font-size: 10px; opacity: 0.6; margin-top: 4px; }
+
+        .msg-time {
+            font-size: 10px;
+            opacity: 0.6;
+            margin-top: 4px;
+        }
 
         .chat-input-wrap {
             padding: 14px;
@@ -233,6 +380,7 @@
             gap: 10px;
             flex-shrink: 0;
         }
+
         .chat-input {
             flex: 1;
             background: var(--surface2);
@@ -244,7 +392,11 @@
             outline: none;
             font-family: inherit;
         }
-        .chat-input:focus { border-color: rgba(124,92,252,0.5); }
+
+        .chat-input:focus {
+            border-color: rgba(124, 92, 252, 0.5);
+        }
+
         .send-btn {
             width: 42px;
             height: 42px;
@@ -258,12 +410,15 @@
             justify-content: center;
             transition: transform 0.15s;
         }
-        .send-btn:hover { transform: scale(1.08); }
+
+        .send-btn:hover {
+            transform: scale(1.08);
+        }
 
         /* ===== CONTROL BAR ===== */
         .control-bar {
             height: 76px;
-            background: rgba(10,10,12,0.97);
+            background: rgba(10, 10, 12, 0.97);
             border-top: 1px solid var(--border);
             display: flex;
             align-items: center;
@@ -289,9 +444,24 @@
             color: var(--text);
             border: 1px solid var(--border);
         }
-        .ctrl-btn:hover { transform: scale(1.08); border-color: rgba(255,255,255,0.2); }
-        .ctrl-btn.active { background: rgba(124,92,252,0.2); border-color: var(--accent); color: var(--accent2); }
-        .ctrl-btn.off { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: var(--danger); }
+
+        .ctrl-btn:hover {
+            transform: scale(1.08);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .ctrl-btn.active {
+            background: rgba(124, 92, 252, 0.2);
+            border-color: var(--accent);
+            color: var(--accent2);
+        }
+
+        .ctrl-btn.off {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: var(--danger);
+        }
+
         .ctrl-btn.end {
             background: var(--danger);
             border-color: var(--danger);
@@ -300,7 +470,11 @@
             height: 56px;
             font-size: 20px;
         }
-        .ctrl-btn.end:hover { background: #dc2626; transform: scale(1.05); }
+
+        .ctrl-btn.end:hover {
+            background: #dc2626;
+            transform: scale(1.05);
+        }
 
         .ctrl-label {
             display: flex;
@@ -308,6 +482,7 @@
             align-items: center;
             gap: 4px;
         }
+
         .ctrl-label span {
             font-size: 10px;
             color: var(--muted);
@@ -319,8 +494,8 @@
             position: absolute;
             top: 60px;
             left: 16px;
-            background: rgba(34,197,94,0.2);
-            border: 1px solid rgba(34,197,94,0.4);
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.4);
             color: var(--success);
             padding: 6px 14px;
             border-radius: 20px;
@@ -331,7 +506,10 @@
             gap: 6px;
             z-index: 60;
         }
-        .screen-sharing-badge.visible { display: flex; }
+
+        .screen-sharing-badge.visible {
+            display: flex;
+        }
 
         /* Notifications */
         .notif {
@@ -349,7 +527,10 @@
             transition: transform 0.3s ease;
             white-space: nowrap;
         }
-        .notif.show { transform: translateX(-50%) translateY(0); }
+
+        .notif.show {
+            transform: translateX(-50%) translateY(0);
+        }
 
         /* Mic unread badge */
         .chat-badge {
@@ -366,20 +547,27 @@
             justify-content: center;
             font-weight: 700;
         }
-        .chat-badge.visible { display: flex; }
+
+        .chat-badge.visible {
+            display: flex;
+        }
 
         /* ===== PARTNER LEFT OVERLAY ===== */
         .partner-left-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.85);
+            background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(10px);
             z-index: 600;
             display: none;
             align-items: center;
             justify-content: center;
         }
-        .partner-left-overlay.visible { display: flex; }
+
+        .partner-left-overlay.visible {
+            display: flex;
+        }
+
         .partner-left-card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -388,14 +576,46 @@
             text-align: center;
             max-width: 380px;
             width: 90%;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
             animation: slideIn 0.4s ease;
         }
-        @keyframes slideIn { from { transform: translateY(30px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
-        .partner-left-icon { font-size: 48px; margin-bottom: 16px; }
-        .partner-left-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
-        .partner-left-text { color: var(--muted); font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
-        .partner-left-actions { display: flex; gap: 12px; justify-content: center; }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(30px) scale(0.95);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .partner-left-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .partner-left-title {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .partner-left-text {
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .partner-left-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
         .pl-btn {
             padding: 12px 24px;
             border-radius: 14px;
@@ -405,12 +625,18 @@
             border: none;
             transition: all 0.2s;
         }
+
         .pl-btn-primary {
             background: linear-gradient(135deg, #7c5cfc, #a78bfa);
             color: white;
-            box-shadow: 0 4px 16px rgba(124,92,252,0.35);
+            box-shadow: 0 4px 16px rgba(124, 92, 252, 0.35);
         }
-        .pl-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,92,252,0.5); }
+
+        .pl-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(124, 92, 252, 0.5);
+        }
+
         .pl-btn-secondary {
             background: var(--surface2);
             border: 1px solid var(--border);
@@ -421,14 +647,18 @@
         .end-confirm-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(6px);
             z-index: 700;
             display: none;
             align-items: center;
             justify-content: center;
         }
-        .end-confirm-overlay.visible { display: flex; }
+
+        .end-confirm-overlay.visible {
+            display: flex;
+        }
+
         .end-confirm-card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -437,12 +667,28 @@
             text-align: center;
             max-width: 340px;
             width: 90%;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
             animation: slideIn 0.3s ease;
         }
-        .end-confirm-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-        .end-confirm-text { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
-        .end-confirm-actions { display: flex; gap: 10px; justify-content: center; }
+
+        .end-confirm-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .end-confirm-text {
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .end-confirm-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
         .ec-btn {
             padding: 10px 22px;
             border-radius: 12px;
@@ -452,9 +698,21 @@
             border: none;
             transition: all 0.2s;
         }
-        .ec-btn-danger { background: var(--danger); color: white; }
-        .ec-btn-danger:hover { background: #dc2626; }
-        .ec-btn-cancel { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
+
+        .ec-btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .ec-btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .ec-btn-cancel {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--muted);
+        }
 
         /* ===== CONNECTION INDICATOR ===== */
         .connection-indicator {
@@ -469,25 +727,53 @@
             font-size: 11px;
             font-weight: 600;
             z-index: 60;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(4px);
         }
+
         .conn-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
             animation: connPulse 2s infinite;
         }
+
         @keyframes connPulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
         }
-        .conn-connecting .conn-dot { background: #f59e0b; }
-        .conn-connecting { color: #f59e0b; }
-        .conn-connected .conn-dot { background: var(--success); animation: none; }
-        .conn-connected { color: var(--success); }
-        .conn-poor .conn-dot { background: var(--danger); }
-        .conn-poor { color: var(--danger); }
+
+        .conn-connecting .conn-dot {
+            background: #f59e0b;
+        }
+
+        .conn-connecting {
+            color: #f59e0b;
+        }
+
+        .conn-connected .conn-dot {
+            background: var(--success);
+            animation: none;
+        }
+
+        .conn-connected {
+            color: var(--success);
+        }
+
+        .conn-poor .conn-dot {
+            background: var(--danger);
+        }
+
+        .conn-poor {
+            color: var(--danger);
+        }
 
         /* Waiting overlay partner info */
         .waiting-partner-name {
@@ -496,6 +782,7 @@
             color: var(--text);
             margin-bottom: 4px;
         }
+
         .waiting-partner-interests {
             display: flex;
             gap: 6px;
@@ -503,536 +790,1553 @@
             justify-content: center;
             margin-top: 8px;
         }
+
         .waiting-tag {
-            background: rgba(124,92,252,0.2);
-            border: 1px solid rgba(124,92,252,0.35);
+            background: rgba(124, 92, 252, 0.2);
+            border: 1px solid rgba(124, 92, 252, 0.35);
             color: var(--accent2);
             padding: 3px 10px;
             border-radius: 10px;
             font-size: 12px;
             font-weight: 500;
         }
+
+        /* ===== LIVE TRANSLATION SUBTITLES ===== */
+        .subtitle-container {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 80;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            max-width: 80%;
+            width: 100%;
+            pointer-events: none;
+        }
+
+        .subtitle-container.active {
+            display: flex;
+        }
+
+        .subtitle-lang-badge {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(124, 92, 252, 0.25);
+            border: 1px solid rgba(124, 92, 252, 0.4);
+            color: var(--accent2);
+            backdrop-filter: blur(8px);
+        }
+
+        .subtitle-lang-badge.visible {
+            display: flex;
+        }
+
+        .subtitle-lang-badge i {
+            font-size: 10px;
+        }
+
+        .subtitle-box {
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            padding: 12px 22px;
+            max-width: 100%;
+            text-align: center;
+            animation: subtitleFadeIn 0.3s ease;
+        }
+
+        @keyframes subtitleFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .subtitle-original {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.45);
+            margin-bottom: 4px;
+            font-style: italic;
+            display: none;
+        }
+
+        .subtitle-original.visible {
+            display: block;
+        }
+
+        .subtitle-translated {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            line-height: 1.5;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+        }
+
+        .subtitle-listening {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .subtitle-listening.visible {
+            display: flex;
+        }
+
+        .subtitle-listening-dots {
+            display: flex;
+            gap: 3px;
+        }
+
+        .subtitle-listening-dots span {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--accent2);
+            animation: listeningBounce 1.4s ease-in-out infinite;
+        }
+
+        .subtitle-listening-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .subtitle-listening-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes listeningBounce {
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0.6);
+                opacity: 0.4;
+            }
+
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Partner subtitle (from socket relay) */
+        .partner-subtitle-container {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 80;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            max-width: 70%;
+            pointer-events: none;
+        }
+
+        .partner-subtitle-container.active {
+            display: flex;
+        }
+
+        .partner-subtitle-box {
+            background: rgba(124, 92, 252, 0.2);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(124, 92, 252, 0.3);
+            border-radius: 12px;
+            padding: 8px 18px;
+            text-align: center;
+            animation: subtitleFadeIn 0.3s ease;
+        }
+
+        .partner-subtitle-label {
+            font-size: 10px;
+            color: var(--accent2);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .partner-subtitle-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: #fff;
+        }
+
+        /* ===== LANGUAGE PANEL ===== */
+        .lang-panel {
+            width: 0;
+            transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .lang-panel.open {
+            width: 300px;
+        }
+
+        .lang-panel-header {
+            padding: 16px 18px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .lang-panel-title {
+            font-weight: 700;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .lang-panel-close {
+            background: none;
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .lang-panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .lang-panel-body::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        .lang-panel-body::-webkit-scrollbar-thumb {
+            background: var(--surface2);
+            border-radius: 3px;
+        }
+
+        .lang-section-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+        }
+
+        .lang-select-wrap {
+            position: relative;
+        }
+
+        .lang-select {
+            width: 100%;
+            padding: 12px 14px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        .lang-select:focus {
+            border-color: rgba(124, 92, 252, 0.5);
+        }
+
+        .lang-select-arrow {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+            pointer-events: none;
+            font-size: 12px;
+        }
+
+        .lang-toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+        }
+
+        .lang-toggle-label {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .lang-toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            cursor: pointer;
+        }
+
+        .lang-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .lang-toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: var(--surface2);
+            border-radius: 24px;
+            transition: 0.3s;
+            border: 1px solid var(--border);
+        }
+
+        .lang-toggle-slider::before {
+            content: '';
+            position: absolute;
+            height: 18px;
+            width: 18px;
+            left: 2px;
+            bottom: 2px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .lang-toggle input:checked+.lang-toggle-slider {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .lang-toggle input:checked+.lang-toggle-slider::before {
+            transform: translateX(20px);
+        }
+
+        .lang-info-card {
+            background: rgba(124, 92, 252, 0.08);
+            border: 1px solid rgba(124, 92, 252, 0.2);
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .lang-info-card i {
+            color: var(--accent2);
+            margin-right: 6px;
+        }
+
+        .lang-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .lang-status.active {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.25);
+            color: var(--success);
+        }
+
+        .lang-status.inactive {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: var(--muted);
+        }
+
+        .lang-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .lang-status.active .lang-status-dot {
+            background: var(--success);
+            animation: connPulse 2s infinite;
+        }
+
+        .lang-status.inactive .lang-status-dot {
+            background: var(--muted);
+        }
+
+        .lang-unsupported {
+            text-align: center;
+            padding: 24px 16px;
+            color: var(--muted);
+        }
+
+        .lang-unsupported i {
+            font-size: 32px;
+            margin-bottom: 12px;
+            display: block;
+            color: #f59e0b;
+        }
+
+        .lang-unsupported p {
+            font-size: 13px;
+            line-height: 1.6;
+        }
     </style>
 </head>
+
 <body>
 
-<!-- Top Nav -->
-<div class="top-nav">
-    <div class="nav-brand">1GEN · CALL</div>
-    <div class="nav-room" id="roomIdDisplay">Room: —</div>
-    <div class="nav-timer" id="callTimer">00:00</div>
-</div>
+    <!-- Top Nav -->
+    <div class="top-nav">
+        <div class="nav-brand">1GEN · CALL</div>
+        <div class="nav-room" id="roomIdDisplay">Room: —</div>
+        <div class="nav-timer" id="callTimer">00:00</div>
+    </div>
 
-<!-- Main Call Layout -->
-<div class="call-layout">
+    <!-- Main Call Layout -->
+    <div class="call-layout">
 
-    <!-- Videos Area -->
-    <div class="videos-area" id="videosArea">
+        <!-- Videos Area -->
+        <div class="videos-area" id="videosArea">
 
-        <!-- Partner video -->
-        <video id="partnerVideo" autoplay playsinline></video>
+            <!-- Video Grid -->
+            <div id="videoGrid" class="video-grid grid-1">
+                <!-- Remote videos will be injected here -->
+            </div>
 
-        <!-- Waiting overlay -->
-        <div class="waiting-overlay" id="waitingOverlay">
-            <div class="waiting-avatar" id="waitingAvatar">👤</div>
-            <div class="waiting-partner-name" id="waitingPartnerName"></div>
-            <div class="waiting-text">Connecting to your match...</div>
-            <div class="waiting-partner-interests" id="waitingPartnerInterests"></div>
+            <!-- Waiting overlay (shown if no remote peers) -->
+            <div class="waiting-overlay" id="waitingOverlay">
+                <div class="waiting-avatar" id="waitingAvatar">👤</div>
+                <div class="waiting-partner-name" id="waitingPartnerName"></div>
+                <div class="waiting-text">Waiting for others to join...</div>
+                <div class="waiting-partner-interests" id="waitingPartnerInterests"></div>
+            </div>
+
+            <!-- Screen share badge -->
+            <div class="screen-sharing-badge" id="screenShareBadge">
+                <i class="fas fa-desktop"></i> Sharing Screen
+            </div>
+
+            <!-- PIP: Self video -->
+            <div class="pip" id="pip">
+                <video id="myVideo" autoplay muted playsinline></video>
+                <div class="cam-off-overlay" id="camOffOverlay">🎥</div>
+                <div class="pip-label">You</div>
+            </div>
+
+            <!-- Connection indicator -->
+            <div class="connection-indicator conn-connecting" id="connIndicator">
+                <div class="conn-dot"></div>
+                <span>Connecting</span>
+            </div>
+
+            <!-- Live Translation Subtitles (your speech) -->
+            <div class="subtitle-container" id="subtitleContainer">
+                <div class="subtitle-lang-badge" id="subtitleLangBadge">
+                    <i class="fas fa-language"></i>
+                    <span id="subtitleLangText">Detecting...</span>
+                </div>
+                <div class="subtitle-box" id="subtitleBox" style="display:none;">
+                    <div class="subtitle-original" id="subtitleOriginal"></div>
+                    <div class="subtitle-translated" id="subtitleTranslated"></div>
+                </div>
+                <div class="subtitle-listening" id="subtitleListening">
+                    <div class="subtitle-listening-dots"><span></span><span></span><span></span></div>
+                    Listening...
+                </div>
+            </div>
+
+            <!-- Partner's translated captions -->
+            <div class="partner-subtitle-container" id="partnerSubtitleContainer">
+                <div class="partner-subtitle-box">
+                    <div class="partner-subtitle-label" id="partnerSubLabel">Partner</div>
+                    <div class="partner-subtitle-text" id="partnerSubText"></div>
+                </div>
+            </div>
         </div>
 
-        <!-- Partner info overlay -->
-        <div class="partner-info-overlay" id="partnerInfoOverlay">
-            <div class="partner-name" id="partnerNameDisplay">Partner</div>
-            <div class="partner-meta" id="partnerMetaDisplay"></div>
-            <div class="partner-tags" id="partnerTagsDisplay"></div>
+        <!-- Language Settings Panel -->
+        <div class="lang-panel" id="langPanel">
+            <div class="lang-panel-header">
+                <div class="lang-panel-title"><i class="fas fa-globe"></i> Live Translate</div>
+                <button class="lang-panel-close" onclick="toggleLangPanel()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="lang-panel-body">
+                <div class="lang-status inactive" id="translateStatus">
+                    <div class="lang-status-dot"></div>
+                    <span>Translation Off</span>
+                </div>
+
+                <div>
+                    <div class="lang-section-label">Your Language</div>
+                    <p style="font-size:12px;color:var(--muted);margin:4px 0 10px;">Translate everything into:</p>
+                    <div class="lang-select-wrap">
+                        <select class="lang-select" id="targetLangSelect">
+                            <option value="en">🇺🇸 English</option>
+                            <option value="hi">🇮🇳 Hindi</option>
+                            <option value="es">🇪🇸 Spanish</option>
+                            <option value="fr">🇫🇷 French</option>
+                            <option value="de">🇩🇪 German</option>
+                            <option value="pt">🇧🇷 Portuguese</option>
+                            <option value="ru">🇷🇺 Russian</option>
+                            <option value="zh">🇨🇳 Chinese</option>
+                            <option value="ja">🇯🇵 Japanese</option>
+                            <option value="ko">🇰🇷 Korean</option>
+                            <option value="ar">🇸🇦 Arabic</option>
+                            <option value="it">🇮🇹 Italian</option>
+                            <option value="tr">🇹🇷 Turkish</option>
+                            <option value="nl">🇳🇱 Dutch</option>
+                            <option value="th">🇹🇭 Thai</option>
+                            <option value="vi">🇻🇳 Vietnamese</option>
+                            <option value="id">🇮🇩 Indonesian</option>
+                            <option value="pl">🇵🇱 Polish</option>
+                            <option value="bn">🇧🇩 Bengali</option>
+                            <option value="ta">🇮🇳 Tamil</option>
+                            <option value="te">🇮🇳 Telugu</option>
+                            <option value="mr">🇮🇳 Marathi</option>
+                            <option value="ur">🇵🇰 Urdu</option>
+                            <option value="uk">🇺🇦 Ukrainian</option>
+                            <option value="sv">🇸🇪 Swedish</option>
+                        </select>
+                        <span class="lang-select-arrow"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                </div>
+
+                <div class="lang-toggle-row">
+                    <span class="lang-toggle-label">Enable Captions</span>
+                    <label class="lang-toggle">
+                        <input type="checkbox" id="captionsToggle" onchange="toggleCaptions(this.checked)">
+                        <span class="lang-toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="lang-toggle-row">
+                    <span class="lang-toggle-label">Show Original Text</span>
+                    <label class="lang-toggle">
+                        <input type="checkbox" id="showOriginalToggle" checked
+                            onchange="toggleShowOriginal(this.checked)">
+                        <span class="lang-toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="lang-toggle-row">
+                    <span class="lang-toggle-label">Auto-Detect Language</span>
+                    <label class="lang-toggle">
+                        <input type="checkbox" id="autoDetectToggle" checked>
+                        <span class="lang-toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">
+                    <div class="lang-section-label" style="margin-bottom:10px;"><i class="fas fa-volume-up"
+                            style="margin-right:6px;"></i> Voice Output</div>
+                    <div class="lang-toggle-row">
+                        <span class="lang-toggle-label">Speak Translation</span>
+                        <label class="lang-toggle">
+                            <input type="checkbox" id="speakToggle" onchange="toggleSpeak(this.checked)">
+                            <span class="lang-toggle-slider"></span>
+                        </label>
+                    </div>
+                    <p style="font-size:11px;color:var(--muted);margin-top:-4px;line-height:1.5;">When enabled,
+                        translated text will be spoken aloud in your selected language.</p>
+
+                    <div class="lang-toggle-row" style="margin-top:6px;">
+                        <span class="lang-toggle-label" style="font-size:13px;">Speak Partner's Words</span>
+                        <label class="lang-toggle">
+                            <input type="checkbox" id="speakPartnerToggle" checked>
+                            <span class="lang-toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="lang-info-card" id="langInfoCard">
+                    <i class="fas fa-info-circle"></i>
+                    Uses AI speech recognition to detect spoken language, translates, and speaks it aloud in real-time.
+                    Works best in Chrome & Edge browsers.
+                </div>
+            </div>
         </div>
 
-        <!-- Screen share badge -->
-        <div class="screen-sharing-badge" id="screenShareBadge">
-            <i class="fas fa-desktop"></i> Sharing Screen
-        </div>
-
-        <!-- PIP: Self video -->
-        <div class="pip" id="pip">
-            <video id="myVideo" autoplay muted playsinline></video>
-            <div class="cam-off-overlay" id="camOffOverlay">🎥</div>
-            <div class="pip-label">You</div>
-        </div>
-
-        <!-- Connection indicator -->
-        <div class="connection-indicator conn-connecting" id="connIndicator">
-            <div class="conn-dot"></div>
-            <span>Connecting</span>
+        <!-- Chat panel -->
+        <div class="chat-panel" id="chatPanel">
+            <div class="chat-header">
+                <div class="chat-title">💬 Chat</div>
+                <button class="chat-close" onclick="toggleChat()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="messages" id="messages">
+                <!-- messages -->
+            </div>
+            <div class="chat-input-wrap">
+                <input class="chat-input" id="msgInput" type="text" placeholder="Type a message..."
+                    onkeydown="handleKey(event)">
+                <button class="send-btn" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+            </div>
         </div>
     </div>
 
-    <!-- Chat panel -->
-    <div class="chat-panel" id="chatPanel">
-        <div class="chat-header">
-            <div class="chat-title">💬 Chat</div>
-            <button class="chat-close" onclick="toggleChat()"><i class="fas fa-times"></i></button>
+    <!-- Control Bar -->
+    <div class="control-bar">
+        <div class="ctrl-label">
+            <button class="ctrl-btn" id="micBtn" onclick="toggleMic()"><i class="fas fa-microphone"
+                    id="micIcon"></i></button>
+            <span>Mic</span>
         </div>
-        <div class="messages" id="messages">
-            <!-- messages -->
+        <div class="ctrl-label">
+            <button class="ctrl-btn" id="camBtn" onclick="toggleCam()"><i class="fas fa-video"
+                    id="camIcon"></i></button>
+            <span>Camera</span>
         </div>
-        <div class="chat-input-wrap">
-            <input class="chat-input" id="msgInput" type="text" placeholder="Type a message..." onkeydown="handleKey(event)">
-            <button class="send-btn" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+        <div class="ctrl-label">
+            <button class="ctrl-btn" id="screenBtn" onclick="toggleScreenShare()"><i
+                    class="fas fa-desktop"></i></button>
+            <span>Share</span>
         </div>
-    </div>
-</div>
-
-<!-- Control Bar -->
-<div class="control-bar">
-    <div class="ctrl-label">
-        <button class="ctrl-btn" id="micBtn" onclick="toggleMic()"><i class="fas fa-microphone" id="micIcon"></i></button>
-        <span>Mic</span>
-    </div>
-    <div class="ctrl-label">
-        <button class="ctrl-btn" id="camBtn" onclick="toggleCam()"><i class="fas fa-video" id="camIcon"></i></button>
-        <span>Camera</span>
-    </div>
-    <div class="ctrl-label">
-        <button class="ctrl-btn" id="screenBtn" onclick="toggleScreenShare()"><i class="fas fa-desktop"></i></button>
-        <span>Share</span>
-    </div>
-    <div class="ctrl-label" style="position:relative;">
-        <button class="ctrl-btn" id="chatBtn" onclick="toggleChat()"><i class="fas fa-comment"></i></button>
-        <div class="chat-badge" id="chatBadge">!</div>
-        <span>Chat</span>
-    </div>
-    <div class="ctrl-label">
-        <button class="ctrl-btn end" onclick="endCall()"><i class="fas fa-phone-slash"></i></button>
-        <span>End</span>
-    </div>
-</div>
-
-<!-- Notification -->
-<div class="notif" id="notif"></div>
-
-<!-- Partner Left Overlay -->
-<div class="partner-left-overlay" id="partnerLeftOverlay">
-    <div class="partner-left-card">
-        <div class="partner-left-icon">👋</div>
-        <div class="partner-left-title" id="partnerLeftTitle">Partner has left</div>
-        <div class="partner-left-text">The call has ended. Would you like to find someone new?</div>
-        <div class="partner-left-actions">
-            <button class="pl-btn pl-btn-primary" onclick="returnToLobby()"><i class="fas fa-users"></i> Find New Match</button>
-            <button class="pl-btn pl-btn-secondary" onclick="closePartnerLeftOverlay()">Stay</button>
+        <div class="ctrl-label">
+            <button class="ctrl-btn" id="translateBtn" onclick="toggleLangPanel()"><i class="fas fa-globe"
+                    id="translateIcon"></i></button>
+            <span>Translate</span>
+        </div>
+        <div class="ctrl-label" style="position:relative;">
+            <button class="ctrl-btn" id="chatBtn" onclick="toggleChat()"><i class="fas fa-comment"></i></button>
+            <div class="chat-badge" id="chatBadge">!</div>
+            <span>Chat</span>
+        </div>
+        <div class="ctrl-label">
+            <button class="ctrl-btn end" onclick="endCall()"><i class="fas fa-phone-slash"></i></button>
+            <span>End</span>
         </div>
     </div>
-</div>
 
-<!-- End Call Confirmation -->
-<div class="end-confirm-overlay" id="endConfirmOverlay">
-    <div class="end-confirm-card">
-        <div class="end-confirm-title">📞 End this call?</div>
-        <div class="end-confirm-text">You'll be disconnected from your match.</div>
-        <div class="end-confirm-actions">
-            <button class="ec-btn ec-btn-danger" onclick="confirmEndCall()">End Call</button>
-            <button class="ec-btn ec-btn-cancel" onclick="cancelEndCall()">Cancel</button>
+    <!-- Notification -->
+    <div class="notif" id="notif"></div>
+
+    <!-- Partner Left Overlay -->
+    <div class="partner-left-overlay" id="partnerLeftOverlay">
+        <div class="partner-left-card">
+            <div class="partner-left-icon">👋</div>
+            <div class="partner-left-title" id="partnerLeftTitle">Partner has left</div>
+            <div class="partner-left-text">The call has ended. Would you like to find someone new?</div>
+            <div class="partner-left-actions">
+                <button class="pl-btn pl-btn-primary" onclick="returnToLobby()"><i class="fas fa-users"></i> Find New
+                    Match</button>
+                <button class="pl-btn pl-btn-secondary" onclick="closePartnerLeftOverlay()">Stay</button>
+            </div>
         </div>
     </div>
-</div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script>
-    // ===== STATE =====
-    let socket = null;
-    let user = null;
-    let currentStream = null;
-    let screenStream = null;
-    let peerConnection = null;
-    let roomId = null;
-    let partnerSocketId = null;
-    let isMuted = false;
-    let isCamOff = false;
-    let callStartTime = null;
-    let timerInterval = null;
-    let chatOpen = false;
-    let unreadCount = 0;
+    <!-- End Call Confirmation -->
+    <div class="end-confirm-overlay" id="endConfirmOverlay">
+        <div class="end-confirm-card">
+            <div class="end-confirm-title">📞 End this call?</div>
+            <div class="end-confirm-text">You'll be disconnected from your match.</div>
+            <div class="end-confirm-actions">
+                <button class="ec-btn ec-btn-danger" onclick="confirmEndCall()">End Call</button>
+                <button class="ec-btn ec-btn-cancel" onclick="cancelEndCall()">Cancel</button>
+            </div>
+        </div>
+    </div>
 
-    // ICE servers
-    const iceServers = {
-        iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-    };
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // ===== STATE =====
+        let socket = null;
+        let user = null;
+        let currentStream = null;
+        let screenStream = null;
+        let peers = new Map(); // socketId -> RTCPeerConnection
+        let roomId = null;
+        let isMuted = false;
+        let isCamOff = false;
+        let callStartTime = null;
+        let timerInterval = null;
+        let chatOpen = false;
+        let unreadCount = 0;
 
-    // ===== INIT =====
-    user = JSON.parse(localStorage.getItem('user')) || { _id: 'guest-' + Date.now(), name: 'Guest', interests: [] };
+        // ICE servers
+        const iceServers = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
 
-    // Get room from URL
-    const params = new URLSearchParams(window.location.search);
-    roomId = params.get('room');
+        // ===== INIT =====
+        user = JSON.parse(localStorage.getItem('user')) || { _id: 'guest-' + Date.now(), name: 'Guest', interests: [] };
 
-    if (!roomId) {
-        // No room — redirect back
-        location.href = '/video.html';
-    }
+        // Get room from URL
+        const params = new URLSearchParams(window.location.search);
+        roomId = params.get('room');
 
-    document.getElementById('roomIdDisplay').textContent = 'Room: ' + roomId.substring(0, 16) + '…';
-
-    // Load matched partner info from sessionStorage
-    let matchedPartner = null;
-    try {
-        matchedPartner = JSON.parse(sessionStorage.getItem('matchedPartner'));
-    } catch (e) {}
-
-    if (matchedPartner) {
-        // Display partner info on waiting screen
-        const nameEl = document.getElementById('waitingPartnerName');
-        nameEl.textContent = matchedPartner.name || 'Your Match';
-
-        // Display partner interests on waiting screen
-        const interestsWrap = document.getElementById('waitingPartnerInterests');
-        (matchedPartner.interests || []).forEach(i => {
-            const tag = document.createElement('span');
-            tag.className = 'waiting-tag';
-            tag.textContent = i;
-            interestsWrap.appendChild(tag);
-        });
-
-        // Set avatar if available
-        if (matchedPartner.avatar) {
-            document.getElementById('waitingAvatar').innerHTML =
-                `<img src="${matchedPartner.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+        if (!roomId) {
+            // No room — redirect back
+            location.href = '/video.html';
         }
 
-        // Pre-fill partner overlay
-        document.getElementById('partnerNameDisplay').textContent = matchedPartner.name || 'Partner';
-        document.getElementById('partnerMetaDisplay').textContent = (matchedPartner.country || '');
-        const tagsContainer = document.getElementById('partnerTagsDisplay');
-        (matchedPartner.interests || []).forEach(i => {
-            const tag = document.createElement('span');
-            tag.className = 'partner-tag';
-            tag.textContent = i;
-            tagsContainer.appendChild(tag);
-        });
-    }
+        document.getElementById('roomIdDisplay').textContent = 'Room: ' + roomId.substring(0, 16) + '…';
 
-    socket = io();
-
-    // Initialize camera
-    async function init() {
+        // Load matched partner info from sessionStorage
+        let matchedPartner = null;
         try {
-            currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            document.getElementById('myVideo').srcObject = currentStream;
-        } catch (e) {
-            showNotif('⚠️ Could not access camera — audio only');
+            matchedPartner = JSON.parse(sessionStorage.getItem('matchedPartner'));
+        } catch (e) { }
+
+        if (matchedPartner) {
+            // Display partner info on waiting screen
+            const nameEl = document.getElementById('waitingPartnerName');
+            nameEl.textContent = matchedPartner.name || 'Your Match';
+
+            // Display partner interests on waiting screen
+            const interestsWrap = document.getElementById('waitingPartnerInterests');
+            (matchedPartner.interests || []).forEach(i => {
+                const tag = document.createElement('span');
+                tag.className = 'waiting-tag';
+                tag.textContent = i;
+                interestsWrap.appendChild(tag);
+            });
+
+            // Set avatar if available
+            if (matchedPartner.avatar) {
+                document.getElementById('waitingAvatar').innerHTML =
+                    `<img src="${matchedPartner.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+            }
+
+            // Pre-fill partner overlay
+            document.getElementById('partnerNameDisplay').textContent = matchedPartner.name || 'Partner';
+            document.getElementById('partnerMetaDisplay').textContent = (matchedPartner.country || '');
+            const tagsContainer = document.getElementById('partnerTagsDisplay');
+            (matchedPartner.interests || []).forEach(i => {
+                const tag = document.createElement('span');
+                tag.className = 'partner-tag';
+                tag.textContent = i;
+                tagsContainer.appendChild(tag);
+            });
+        }
+
+        socket = io();
+
+        // Initialize camera
+        async function init() {
             try {
-                currentStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
-            } catch (e2) {
-                showNotif('❌ No media access');
+                currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('myVideo').srcObject = currentStream;
+            } catch (e) {
+                showNotif('⚠️ Could not access camera — audio only');
+                try {
+                    currentStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+                } catch (e2) {
+                    showNotif('❌ No media access');
+                }
             }
+
+            // Join room
+            socket.emit('call-join', { roomId, user });
+
+            setupSocketHandlers();
         }
 
-        // Join room
-        socket.emit('call-join', { roomId, user });
+        init();
 
-        setupSocketHandlers();
-    }
+        // ===== SOCKET HANDLERS =====
+        function setupSocketHandlers() {
+            socket.on('peer-joined', async ({ socketId, user: partnerUser }) => {
+                showNotif('🎉 ' + (partnerUser.name || 'Partner') + ' joined!');
+                
+                // In mesh, everyone connects to the newcomer
+                const pc = await createPeerConnection(socketId, partnerUser);
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                socket.emit('webrtc-offer', { roomId, to: socketId, offer });
+            });
 
-    init();
+            socket.on('webrtc-offer', async ({ from, offer }) => {
+                const pc = await createPeerConnection(from);
+                await pc.setRemoteDescription(new RTCSessionDescription(offer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                socket.emit('webrtc-answer', { roomId, to: from, answer });
+            });
 
-    // ===== SOCKET HANDLERS =====
-    function setupSocketHandlers() {
-        socket.on('peer-joined', async ({ socketId, user: partnerUser }) => {
-            partnerSocketId = socketId;
-            showNotif('🎉 ' + (partnerUser.name || 'Partner') + ' joined!');
-            document.getElementById('partnerNameDisplay').textContent = partnerUser.name || 'Partner';
-            document.getElementById('partnerMetaDisplay').textContent = (partnerUser.interests || []).join(', ');
+            socket.on('webrtc-answer', async ({ from, answer }) => {
+                const pc = peers.get(from);
+                if (pc) {
+                    await pc.setRemoteDescription(new RTCSessionDescription(answer));
+                }
+            });
 
-            // Start WebRTC as caller
-            await createPeerConnection();
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            socket.emit('webrtc-offer', { roomId, offer });
-        });
+            socket.on('webrtc-ice', async ({ from, candidate }) => {
+                const pc = peers.get(from);
+                if (pc && candidate) {
+                    try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { }
+                }
+            });
 
-        socket.on('webrtc-offer', async ({ from, offer }) => {
-            partnerSocketId = from;
-            await createPeerConnection();
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            socket.emit('webrtc-answer', { roomId, answer });
-        });
+            socket.on('message', (data) => {
+                appendMessage(data.text, 'received', data.sender);
+                if (!chatOpen) {
+                    unreadCount++;
+                    const badge = document.getElementById('chatBadge');
+                    badge.classList.add('visible');
+                    badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                }
+            });
 
-        socket.on('webrtc-answer', async ({ answer }) => {
-            if (peerConnection) {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-            }
-        });
+            socket.on('friend-request-received', ({ fromUser }) => {
+                showNotif(`🤝 Friend request from ${fromUser.name}`);
+            });
 
-        socket.on('webrtc-ice', async ({ candidate }) => {
-            if (peerConnection && candidate) {
-                try { await peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); } catch(e) {}
-            }
-        });
+            socket.on('friend-request-accepted', ({ byUser }) => {
+                showNotif(`✅ ${byUser.name} accepted your friend request!`);
+            });
 
-        socket.on('message', (data) => {
-            appendMessage(data.text, 'received', data.sender);
-            if (!chatOpen) {
-                unreadCount++;
-                const badge = document.getElementById('chatBadge');
-                badge.classList.add('visible');
-                badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
-            }
-        });
+            socket.on('match-error', ({ message }) => {
+                showNotif(`⚠️ ${message}`);
+                setTimeout(() => location.href = '/video.html', 3000);
+            });
 
-        socket.on('disconnect', () => {
-            showNotif('🔌 Disconnected from server');
-        });
+            socket.on('disconnect', () => {
+                showNotif('🔌 Disconnected from server');
+            });
 
-        // Partner left the call
-        socket.on('partner-left', ({ name }) => {
-            document.getElementById('partnerLeftTitle').textContent =
-                (name || 'Partner') + ' has left the call';
-            document.getElementById('partnerLeftOverlay').classList.add('visible');
-            stopCallTimer();
-        });
-    }
-
-    // ===== WEBRTC =====
-    async function createPeerConnection() {
-        peerConnection = new RTCPeerConnection(iceServers);
-
-        // Add local tracks
-        if (currentStream) {
-            currentStream.getTracks().forEach(track => peerConnection.addTrack(track, currentStream));
+            // A peer left the call
+            socket.on('peer-left', ({ socketId, name }) => {
+                showNotif(`👋 ${name || 'Partner'} left`);
+                removePeer(socketId);
+            });
         }
 
-        // Receive remote tracks
-        peerConnection.ontrack = (event) => {
-            const partnerVid = document.getElementById('partnerVideo');
-            partnerVid.srcObject = event.streams[0];
-            document.getElementById('waitingOverlay').style.display = 'none';
-            document.getElementById('partnerInfoOverlay').style.display = 'block';
-            startCallTimer();
-        };
+        // ===== WEBRTC MESH =====
+        async function createPeerConnection(targetSocketId, partnerUser = null) {
+            if (peers.has(targetSocketId)) return peers.get(targetSocketId);
 
-        // ICE candidates
-        peerConnection.onicecandidate = (event) => {
-            if (event.candidate) {
-                socket.emit('webrtc-ice', { roomId, candidate: event.candidate });
+            const pc = new RTCPeerConnection(iceServers);
+            peers.set(targetSocketId, pc);
+
+            // Add local tracks
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => pc.addTrack(track, currentStream));
             }
-        };
 
-        peerConnection.onconnectionstatechange = () => {
-            const state = peerConnection.connectionState;
-            const indicator = document.getElementById('connIndicator');
+            // Receive remote tracks
+            pc.ontrack = (event) => {
+                addRemoteVideo(targetSocketId, event.streams[0], partnerUser);
+                document.getElementById('waitingOverlay').style.display = 'none';
+                startCallTimer();
+            };
 
-            if (state === 'connected') {
-                indicator.className = 'connection-indicator conn-connected';
-                indicator.querySelector('span').textContent = 'Connected';
-            } else if (state === 'connecting' || state === 'new') {
-                indicator.className = 'connection-indicator conn-connecting';
-                indicator.querySelector('span').textContent = 'Connecting';
-            } else if (state === 'disconnected' || state === 'failed') {
-                indicator.className = 'connection-indicator conn-poor';
-                indicator.querySelector('span').textContent = 'Disconnected';
+            // ICE candidates
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.emit('webrtc-ice', { roomId, to: targetSocketId, candidate: event.candidate });
+                }
+            };
+
+            pc.onconnectionstatechange = () => {
+                updateConnectionIndicator();
+            };
+
+            return pc;
+        }
+
+        function addRemoteVideo(socketId, stream, partnerUser) {
+            if (document.getElementById(`video-${socketId}`)) return;
+
+            const grid = document.getElementById('videoGrid');
+            const wrap = document.createElement('div');
+            wrap.className = 'remote-video-wrap';
+            wrap.id = `video-${socketId}`;
+
+            const video = document.createElement('video');
+            video.autoplay = true;
+            video.playsInline = true;
+            video.srcObject = stream;
+
+            const overlay = document.createElement('div');
+            overlay.className = 'peer-overlay';
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'peer-name';
+            nameSpan.textContent = partnerUser ? partnerUser.name : 'Participant';
+
+            const addBtn = document.createElement('button');
+            addBtn.className = 'add-friend-btn';
+            addBtn.innerHTML = '<i class="fas fa-user-plus"></i>';
+            if (partnerUser && partnerUser._id) {
+                addBtn.onclick = () => sendFriendRequest(partnerUser._id);
+            } else {
+                addBtn.style.display = 'none';
+            }
+
+            overlay.appendChild(nameSpan);
+            overlay.appendChild(addBtn);
+            wrap.appendChild(video);
+            wrap.appendChild(overlay);
+            grid.appendChild(wrap);
+
+            updateGridLayout();
+        }
+
+        function removePeer(socketId) {
+            const pc = peers.get(socketId);
+            if (pc) {
+                pc.close();
+                peers.delete(socketId);
+            }
+            const el = document.getElementById(`video-${socketId}`);
+            if (el) el.remove();
+
+            if (peers.size === 0) {
                 document.getElementById('waitingOverlay').style.display = 'flex';
-                document.getElementById('partnerInfoOverlay').style.display = 'none';
                 stopCallTimer();
-                showNotif('📵 Partner disconnected');
             }
-        };
-    }
-
-    // ===== CONTROLS =====
-    function toggleMic() {
-        isMuted = !isMuted;
-        if (currentStream) {
-            currentStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+            updateGridLayout();
+            updateConnectionIndicator();
         }
-        const btn = document.getElementById('micBtn');
-        const icon = document.getElementById('micIcon');
-        btn.classList.toggle('off', isMuted);
-        icon.className = isMuted ? 'fas fa-microphone-slash' : 'fas fa-microphone';
-        showNotif(isMuted ? '🔇 Microphone muted' : '🎤 Microphone on');
-    }
 
-    function toggleCam() {
-        isCamOff = !isCamOff;
-        if (currentStream) {
-            currentStream.getVideoTracks().forEach(t => t.enabled = !isCamOff);
+        function updateGridLayout() {
+            const grid = document.getElementById('videoGrid');
+            const count = peers.size;
+            grid.className = 'video-grid grid-' + Math.max(1, count);
         }
-        const btn = document.getElementById('camBtn');
-        const icon = document.getElementById('camIcon');
-        btn.classList.toggle('off', isCamOff);
-        icon.className = isCamOff ? 'fas fa-video-slash' : 'fas fa-video';
-        document.getElementById('camOffOverlay').style.display = isCamOff ? 'flex' : 'none';
-        showNotif(isCamOff ? '📷 Camera off' : '🎥 Camera on');
-    }
 
-    async function toggleScreenShare() {
-        const btn = document.getElementById('screenBtn');
-        if (!screenStream) {
-            try {
-                screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always' }, audio: true });
-                const videoTrack = screenStream.getVideoTracks()[0];
+        function updateConnectionIndicator() {
+            const indicator = document.getElementById('connIndicator');
+            const span = indicator.querySelector('span');
+            
+            if (peers.size === 0) {
+                indicator.className = 'connection-indicator conn-connecting';
+                span.textContent = 'Waiting';
+                return;
+            }
 
-                // Replace video track in peer connection
-                if (peerConnection) {
-                    const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+            // Check if all peers are connected
+            let allConnected = true;
+            peers.forEach(pc => {
+                if (pc.connectionState !== 'connected') allConnected = false;
+            });
+
+            if (allConnected) {
+                indicator.className = 'connection-indicator conn-connected';
+                span.textContent = 'Connected';
+            } else {
+                indicator.className = 'connection-indicator conn-connecting';
+                span.textContent = 'Negotiating';
+            }
+        }
+
+        function sendFriendRequest(toUserId) {
+            if (toUserId.startsWith('guest-')) {
+                showNotif('⚠️ Cannot add guests as friends');
+                return;
+            }
+            socket.emit('friend-request', { toUserId });
+            showNotif('📩 Friend request sent!');
+        }
+
+        // ===== CONTROLS =====
+        function toggleMic() {
+            isMuted = !isMuted;
+            if (currentStream) {
+                currentStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+            }
+            const btn = document.getElementById('micBtn');
+            const icon = document.getElementById('micIcon');
+            btn.classList.toggle('off', isMuted);
+            icon.className = isMuted ? 'fas fa-microphone-slash' : 'fas fa-microphone';
+            showNotif(isMuted ? '🔇 Microphone muted' : '🎤 Microphone on');
+        }
+
+        function toggleCam() {
+            isCamOff = !isCamOff;
+            if (currentStream) {
+                currentStream.getVideoTracks().forEach(t => t.enabled = !isCamOff);
+            }
+            const btn = document.getElementById('camBtn');
+            const icon = document.getElementById('camIcon');
+            btn.classList.toggle('off', isCamOff);
+            icon.className = isCamOff ? 'fas fa-video-slash' : 'fas fa-video';
+            document.getElementById('camOffOverlay').style.display = isCamOff ? 'flex' : 'none';
+            showNotif(isCamOff ? '📷 Camera off' : '🎥 Camera on');
+        }
+
+        async function toggleScreenShare() {
+            const btn = document.getElementById('screenBtn');
+            if (!screenStream) {
+                try {
+                    screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always' }, audio: true });
+                    const videoTrack = screenStream.getVideoTracks()[0];
+
+                    // Replace video track in all peer connections
+                    peers.forEach(pc => {
+                        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                        if (sender) sender.replaceTrack(videoTrack);
+                    });
+
+                    document.getElementById('myVideo').srcObject = screenStream;
+                    btn.classList.add('active');
+                    document.getElementById('screenShareBadge').classList.add('visible');
+                    showNotif('🖥️ Screen sharing started');
+
+                    videoTrack.onended = () => stopScreenShare();
+                } catch (e) {
+                    if (e.name !== 'NotAllowedError') showNotif('❌ Could not share screen');
+                }
+            } else {
+                stopScreenShare();
+            }
+        }
+
+        function stopScreenShare() {
+            if (!screenStream) return;
+            screenStream.getTracks().forEach(t => t.stop());
+            screenStream = null;
+
+            // Restore camera
+            if (currentStream) {
+                const videoTrack = currentStream.getVideoTracks()[0];
+                peers.forEach(pc => {
+                    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
                     if (sender) sender.replaceTrack(videoTrack);
+                });
+                document.getElementById('myVideo').srcObject = currentStream;
+            }
+
+            document.getElementById('screenBtn').classList.remove('active');
+            document.getElementById('screenShareBadge').classList.remove('visible');
+            showNotif('📷 Camera restored');
+        }
+
+        function toggleChat() {
+            chatOpen = !chatOpen;
+            document.getElementById('chatPanel').classList.toggle('open', chatOpen);
+            document.getElementById('chatBtn').classList.toggle('active', chatOpen);
+            if (chatOpen) {
+                unreadCount = 0;
+                document.getElementById('chatBadge').classList.remove('visible');
+                document.getElementById('msgInput').focus();
+            }
+        }
+
+        function endCall() {
+            document.getElementById('endConfirmOverlay').classList.add('visible');
+        }
+
+        function confirmEndCall() {
+            if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+            if (screenStream) screenStream.getTracks().forEach(t => t.stop());
+            peers.forEach(pc => pc.close());
+            peers.clear();
+            socket.disconnect();
+            sessionStorage.removeItem('matchedPartner');
+            window.location.href = '/video.html?returning=1';
+        }
+
+        function cancelEndCall() {
+            document.getElementById('endConfirmOverlay').classList.remove('visible');
+        }
+
+        function returnToLobby() {
+            if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+            if (screenStream) screenStream.getTracks().forEach(t => t.stop());
+            peers.forEach(pc => pc.close());
+            peers.clear();
+            socket.disconnect();
+            sessionStorage.removeItem('matchedPartner');
+            window.location.href = '/video.html?returning=1';
+        }
+
+        function closePartnerLeftOverlay() {
+            document.getElementById('partnerLeftOverlay').classList.remove('visible');
+        }
+
+        // ===== MESSAGING =====
+        function sendMessage() {
+            const input = document.getElementById('msgInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            socket.emit('message', { text, sender: user.name });
+            appendMessage(text, 'sent', 'You');
+            input.value = '';
+        }
+
+        function handleKey(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function appendMessage(text, type, sender) {
+            const msgs = document.getElementById('messages');
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const div = document.createElement('div');
+            div.className = 'msg ' + type;
+            div.innerHTML = `${text}<div class="msg-time">${sender} · ${time}</div>`;
+            msgs.appendChild(div);
+            msgs.scrollTop = msgs.scrollHeight;
+        }
+
+        // ===== TIMER =====
+        function startCallTimer() {
+            if (callStartTime) return;
+            callStartTime = Date.now();
+            timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+                const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+                const s = String(elapsed % 60).padStart(2, '0');
+                document.getElementById('callTimer').textContent = m + ':' + s;
+            }, 1000);
+        }
+
+        function stopCallTimer() {
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+            callStartTime = null;
+        }
+
+        // ===== NOTIFICATION ===== 
+        let notifTimeout = null;
+        function showNotif(msg) {
+            const n = document.getElementById('notif');
+            n.textContent = msg;
+            n.classList.add('show');
+            clearTimeout(notifTimeout);
+            notifTimeout = setTimeout(() => n.classList.remove('show'), 3000);
+        }
+
+        // ===== DRAGGABLE PIP =====
+        (function () {
+            const pip = document.getElementById('pip');
+            let dragging = false, ox, oy;
+            pip.addEventListener('mousedown', e => {
+                dragging = true;
+                ox = e.clientX - pip.offsetLeft;
+                oy = e.clientY - pip.offsetTop;
+                pip.style.cursor = 'grabbing';
+            });
+            document.addEventListener('mousemove', e => {
+                if (!dragging) return;
+                const parent = pip.parentElement.getBoundingClientRect();
+                let nx = e.clientX - ox;
+                let ny = e.clientY - oy;
+                nx = Math.max(0, Math.min(nx, parent.width - pip.offsetWidth));
+                ny = Math.max(0, Math.min(ny, parent.height - pip.offsetHeight));
+                pip.style.right = 'auto';
+                pip.style.left = nx + 'px';
+                pip.style.top = ny + 'px';
+            });
+            document.addEventListener('mouseup', () => { dragging = false; pip.style.cursor = 'grab'; });
+        })();
+
+        // ===== LIVE TRANSLATION ENGINE =====
+        const LANG_NAMES = {
+            en: 'English', hi: 'Hindi', es: 'Spanish', fr: 'French', de: 'German',
+            pt: 'Portuguese', ru: 'Russian', zh: 'Chinese', ja: 'Japanese', ko: 'Korean',
+            ar: 'Arabic', it: 'Italian', tr: 'Turkish', nl: 'Dutch', th: 'Thai',
+            vi: 'Vietnamese', id: 'Indonesian', pl: 'Polish', bn: 'Bengali', ta: 'Tamil',
+            te: 'Telugu', mr: 'Marathi', ur: 'Urdu', uk: 'Ukrainian', sv: 'Swedish'
+        };
+
+        let langPanelOpen = false;
+        let captionsEnabled = false;
+        let showOriginal = true;
+        let speakEnabled = false;
+        let recognition = null;
+        let isListening = false;
+        let isSpeaking = false;
+        let subtitleClearTimeout = null;
+        let partnerSubClearTimeout = null;
+        let translationCache = {};
+
+        // Load saved preferences
+        const savedLang = localStorage.getItem('translateLang');
+        if (savedLang) {
+            const sel = document.getElementById('targetLangSelect');
+            if (sel) sel.value = savedLang;
+        }
+
+        // Check browser support
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const speechSupported = !!SpeechRecognition;
+
+        if (!speechSupported) {
+            const body = document.getElementById('langInfoCard');
+            if (body) {
+                body.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#f59e0b;"></i> Speech recognition is not supported in this browser. Please use <b>Chrome</b> or <b>Edge</b> for live translation.';
+            }
+        }
+
+        function toggleLangPanel() {
+            langPanelOpen = !langPanelOpen;
+            document.getElementById('langPanel').classList.toggle('open', langPanelOpen);
+            document.getElementById('translateBtn').classList.toggle('active', langPanelOpen || captionsEnabled);
+
+            // Close chat if open
+            if (langPanelOpen && chatOpen) toggleChat();
+        }
+
+        function toggleCaptions(on) {
+            captionsEnabled = on;
+            const statusEl = document.getElementById('translateStatus');
+            const container = document.getElementById('subtitleContainer');
+            const translateBtn = document.getElementById('translateBtn');
+
+            if (on) {
+                statusEl.className = 'lang-status active';
+                statusEl.querySelector('span').textContent = 'Translation Active';
+                container.classList.add('active');
+                translateBtn.classList.add('active');
+                startSpeechRecognition();
+                showNotif('🌐 Live translation ON');
+            } else {
+                statusEl.className = 'lang-status inactive';
+                statusEl.querySelector('span').textContent = 'Translation Off';
+                container.classList.remove('active');
+                if (!langPanelOpen) translateBtn.classList.remove('active');
+                stopSpeechRecognition();
+                showNotif('🔇 Live translation OFF');
+            }
+
+            // Save preference
+            localStorage.setItem('translateLang', document.getElementById('targetLangSelect').value);
+        }
+
+        function toggleShowOriginal(on) {
+            showOriginal = on;
+        }
+
+        function toggleSpeak(on) {
+            speakEnabled = on;
+            if (on) {
+                showNotif('🔊 Voice output ON — translations will be spoken aloud');
+            } else {
+                speechSynthesis.cancel();
+                showNotif('🔇 Voice output OFF');
+            }
+        }
+
+        // ===== TEXT-TO-SPEECH =====
+        function speakText(text, langCode) {
+            if (!speakEnabled || !text || !text.trim()) return;
+
+            // Stop any current speech
+            speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = langCode || 'en';
+            utterance.rate = 0.95;
+            utterance.pitch = 1;
+            utterance.volume = 1;
+
+            // Try to find a matching voice for the language
+            const voices = speechSynthesis.getVoices();
+            const langPrefix = (langCode || 'en').split('-')[0].toLowerCase();
+            const matchingVoice = voices.find(v => v.lang.toLowerCase().startsWith(langPrefix));
+            if (matchingVoice) utterance.voice = matchingVoice;
+
+            // Pause recognition while speaking to avoid feedback loop
+            utterance.onstart = () => {
+                isSpeaking = true;
+                if (recognition && isListening) {
+                    try { recognition.stop(); } catch (e) { }
+                }
+            };
+
+            utterance.onend = () => {
+                isSpeaking = false;
+                // Resume recognition after speaking
+                if (captionsEnabled && !isListening) {
+                    setTimeout(() => {
+                        if (captionsEnabled && !isSpeaking) startSpeechRecognition();
+                    }, 400);
+                }
+            };
+
+            utterance.onerror = () => {
+                isSpeaking = false;
+                if (captionsEnabled && !isListening) {
+                    setTimeout(() => startSpeechRecognition(), 400);
+                }
+            };
+
+            speechSynthesis.speak(utterance);
+        }
+
+        // ===== SPEECH RECOGNITION =====
+        function startSpeechRecognition() {
+            if (!speechSupported || isListening) return;
+
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            // Auto-detect language or use a broad setting
+            recognition.lang = ''; // empty = auto-detect on Chrome
+
+            recognition.onstart = () => {
+                isListening = true;
+                document.getElementById('subtitleListening').classList.add('visible');
+            };
+
+            recognition.onresult = (event) => {
+                let interim = '';
+                let final = '';
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        final += transcript;
+                    } else {
+                        interim += transcript;
+                    }
                 }
 
-                document.getElementById('myVideo').srcObject = screenStream;
-                btn.classList.add('active');
-                document.getElementById('screenShareBadge').classList.add('visible');
-                showNotif('🖥️ Screen sharing started');
+                // Show interim text immediately
+                if (interim) {
+                    showSubtitle(interim, null, true);
+                }
 
-                videoTrack.onended = () => stopScreenShare();
+                // Process final text for translation
+                if (final.trim()) {
+                    processTranslation(final.trim());
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.log('Speech recognition error:', event.error);
+                if (event.error === 'not-allowed') {
+                    showNotif('❌ Microphone access needed for translation');
+                    captionsEnabled = false;
+                    document.getElementById('captionsToggle').checked = false;
+                    toggleCaptions(false);
+                } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                    // Auto-restart on transient errors
+                    setTimeout(() => {
+                        if (captionsEnabled) startSpeechRecognition();
+                    }, 1000);
+                }
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                document.getElementById('subtitleListening').classList.remove('visible');
+                // Auto-restart if still enabled
+                if (captionsEnabled) {
+                    setTimeout(() => {
+                        if (captionsEnabled) startSpeechRecognition();
+                    }, 300);
+                }
+            };
+
+            try {
+                recognition.start();
             } catch (e) {
-                if (e.name !== 'NotAllowedError') showNotif('❌ Could not share screen');
+                console.error('Could not start speech recognition:', e);
             }
-        } else {
-            stopScreenShare();
         }
-    }
 
-    function stopScreenShare() {
-        if (!screenStream) return;
-        screenStream.getTracks().forEach(t => t.stop());
-        screenStream = null;
-
-        // Restore camera
-        if (currentStream) {
-            const videoTrack = currentStream.getVideoTracks()[0];
-            if (peerConnection && videoTrack) {
-                const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
-                if (sender) sender.replaceTrack(videoTrack);
+        function stopSpeechRecognition() {
+            isListening = false;
+            if (recognition) {
+                try { recognition.stop(); } catch (e) { }
+                recognition = null;
             }
-            document.getElementById('myVideo').srcObject = currentStream;
+            document.getElementById('subtitleListening').classList.remove('visible');
         }
 
-        document.getElementById('screenBtn').classList.remove('active');
-        document.getElementById('screenShareBadge').classList.remove('visible');
-        showNotif('📷 Camera restored');
-    }
+        // ===== TRANSLATION =====
+        async function processTranslation(text) {
+            const targetLang = document.getElementById('targetLangSelect').value;
 
-    function toggleChat() {
-        chatOpen = !chatOpen;
-        document.getElementById('chatPanel').classList.toggle('open', chatOpen);
-        document.getElementById('chatBtn').classList.toggle('active', chatOpen);
-        if (chatOpen) {
-            unreadCount = 0;
-            document.getElementById('chatBadge').classList.remove('visible');
-            document.getElementById('msgInput').focus();
+            // Detect source language using a small heuristic + API
+            try {
+                const translated = await translateText(text, 'autodetect', targetLang);
+                if (translated) {
+                    showSubtitle(text, translated.translatedText, false, translated.detectedLang);
+
+                    // Speak the translation aloud
+                    if (translated.translatedText && translated.translatedText !== text) {
+                        speakText(translated.translatedText, targetLang);
+                    }
+
+                    // Send caption to partner via socket
+                    if (socket && roomId) {
+                        socket.emit('live-caption', {
+                            roomId,
+                            caption: {
+                                original: text,
+                                translated: translated.translatedText,
+                                fromLang: translated.detectedLang,
+                                toLang: targetLang,
+                                senderName: user.name || 'Partner'
+                            }
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('Translation error:', err);
+                // Still show original text
+                showSubtitle(text, text, false);
+            }
         }
-    }
 
-    function endCall() {
-        document.getElementById('endConfirmOverlay').classList.add('visible');
-    }
+        async function translateText(text, fromLang, toLang) {
+            // Check cache
+            const cacheKey = `${text}|${fromLang}|${toLang}`;
+            if (translationCache[cacheKey]) return translationCache[cacheKey];
 
-    function confirmEndCall() {
-        if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-        if (screenStream) screenStream.getTracks().forEach(t => t.stop());
-        if (peerConnection) peerConnection.close();
-        socket.disconnect();
-        sessionStorage.removeItem('matchedPartner');
-        window.location.href = '/video.html';
-    }
+            const langPair = fromLang === 'autodetect' ? `autodetect|${toLang}` : `${fromLang}|${toLang}`;
+            const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`;
 
-    function cancelEndCall() {
-        document.getElementById('endConfirmOverlay').classList.remove('visible');
-    }
+            const response = await fetch(url);
+            const data = await response.json();
 
-    function returnToLobby() {
-        if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-        if (screenStream) screenStream.getTracks().forEach(t => t.stop());
-        if (peerConnection) peerConnection.close();
-        socket.disconnect();
-        sessionStorage.removeItem('matchedPartner');
-        window.location.href = '/video.html';
-    }
+            if (data.responseStatus === 200 && data.responseData) {
+                const result = {
+                    translatedText: data.responseData.translatedText,
+                    detectedLang: data.responseData.detectedLanguage || fromLang
+                };
 
-    function closePartnerLeftOverlay() {
-        document.getElementById('partnerLeftOverlay').classList.remove('visible');
-    }
+                // If detected language is same as target, skip translation
+                const detected = (result.detectedLang || '').split('-')[0].toLowerCase();
+                if (detected === toLang) {
+                    result.translatedText = text; // No translation needed
+                }
 
-    // ===== MESSAGING =====
-    function sendMessage() {
-        const input = document.getElementById('msgInput');
-        const text = input.value.trim();
-        if (!text) return;
+                // Cache it (limit cache to 200 entries)
+                const keys = Object.keys(translationCache);
+                if (keys.length > 200) delete translationCache[keys[0]];
+                translationCache[cacheKey] = result;
 
-        socket.emit('message', { text, sender: user.name });
-        appendMessage(text, 'sent', 'You');
-        input.value = '';
-    }
-
-    function handleKey(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
+                return result;
+            }
+            return { translatedText: text, detectedLang: fromLang };
         }
-    }
 
-    function appendMessage(text, type, sender) {
-        const msgs = document.getElementById('messages');
-        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const div = document.createElement('div');
-        div.className = 'msg ' + type;
-        div.innerHTML = `${text}<div class="msg-time">${sender} · ${time}</div>`;
-        msgs.appendChild(div);
-        msgs.scrollTop = msgs.scrollHeight;
-    }
+        // ===== SUBTITLE DISPLAY =====
+        function showSubtitle(originalText, translatedText, isInterim, detectedLang) {
+            const box = document.getElementById('subtitleBox');
+            const origEl = document.getElementById('subtitleOriginal');
+            const transEl = document.getElementById('subtitleTranslated');
+            const badge = document.getElementById('subtitleLangBadge');
+            const badgeText = document.getElementById('subtitleLangText');
 
-    // ===== TIMER =====
-    function startCallTimer() {
-        if (callStartTime) return;
-        callStartTime = Date.now();
-        timerInterval = setInterval(() => {
-            const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
-            const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
-            const s = String(elapsed % 60).padStart(2, '0');
-            document.getElementById('callTimer').textContent = m + ':' + s;
-        }, 1000);
-    }
+            box.style.display = 'block';
+            document.getElementById('subtitleListening').classList.remove('visible');
 
-    function stopCallTimer() {
-        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-        callStartTime = null;
-    }
+            if (isInterim) {
+                // Show interim text with typing indicator style
+                transEl.textContent = originalText + ' ...';
+                transEl.style.opacity = '0.6';
+                origEl.classList.remove('visible');
+            } else {
+                // Show final translation
+                transEl.textContent = translatedText || originalText;
+                transEl.style.opacity = '1';
 
-    // ===== NOTIFICATION ===== 
-    let notifTimeout = null;
-    function showNotif(msg) {
-        const n = document.getElementById('notif');
-        n.textContent = msg;
-        n.classList.add('show');
-        clearTimeout(notifTimeout);
-        notifTimeout = setTimeout(() => n.classList.remove('show'), 3000);
-    }
+                if (showOriginal && translatedText && translatedText !== originalText) {
+                    origEl.textContent = originalText;
+                    origEl.classList.add('visible');
+                } else {
+                    origEl.classList.remove('visible');
+                }
 
-    // ===== DRAGGABLE PIP =====
-    (function() {
-        const pip = document.getElementById('pip');
-        let dragging = false, ox, oy;
-        pip.addEventListener('mousedown', e => {
-            dragging = true;
-            ox = e.clientX - pip.offsetLeft;
-            oy = e.clientY - pip.offsetTop;
-            pip.style.cursor = 'grabbing';
+                // Show detected language badge
+                if (detectedLang) {
+                    const langCode = (detectedLang || '').split('-')[0].toLowerCase();
+                    const targetLang = document.getElementById('targetLangSelect').value;
+                    const langName = LANG_NAMES[langCode] || langCode.toUpperCase();
+                    const targetName = LANG_NAMES[targetLang] || targetLang.toUpperCase();
+                    badgeText.textContent = langName + ' → ' + targetName;
+                    badge.classList.add('visible');
+                }
+            }
+
+            // Clear after 8 seconds of no new text
+            clearTimeout(subtitleClearTimeout);
+            subtitleClearTimeout = setTimeout(() => {
+                box.style.display = 'none';
+                badge.classList.remove('visible');
+                if (captionsEnabled) {
+                    document.getElementById('subtitleListening').classList.add('visible');
+                }
+            }, 8000);
+        }
+
+        // ===== PARTNER CAPTION DISPLAY =====
+        function showPartnerCaption(caption) {
+            const container = document.getElementById('partnerSubtitleContainer');
+            const label = document.getElementById('partnerSubLabel');
+            const text = document.getElementById('partnerSubText');
+            const speakPartner = document.getElementById('speakPartnerToggle');
+
+            container.classList.add('active');
+            label.textContent = (caption.senderName || 'Partner') + ' · ' +
+                (LANG_NAMES[(caption.fromLang || '').split('-')[0]] || '') + ' → ' +
+                (LANG_NAMES[caption.toLang] || '');
+
+            // Show the translated version in OUR target language if different
+            const myTargetLang = document.getElementById('targetLangSelect').value;
+            if (caption.toLang === myTargetLang) {
+                text.textContent = caption.translated;
+                // Speak partner's translated words
+                if (speakPartner && speakPartner.checked) {
+                    speakText(caption.translated, myTargetLang);
+                }
+            } else {
+                // Re-translate to our language
+                translateText(caption.original, 'autodetect', myTargetLang).then(result => {
+                    text.textContent = result.translatedText;
+                    // Speak partner's translated words
+                    if (speakPartner && speakPartner.checked) {
+                        speakText(result.translatedText, myTargetLang);
+                    }
+                }).catch(() => {
+                    text.textContent = caption.translated; // fallback
+                });
+            }
+
+            clearTimeout(partnerSubClearTimeout);
+            partnerSubClearTimeout = setTimeout(() => {
+                container.classList.remove('active');
+            }, 8000);
+        }
+
+        // Listen for partner captions
+        socket.on('live-caption', (caption) => {
+            showPartnerCaption(caption);
         });
-        document.addEventListener('mousemove', e => {
-            if (!dragging) return;
-            const parent = pip.parentElement.getBoundingClientRect();
-            let nx = e.clientX - ox;
-            let ny = e.clientY - oy;
-            nx = Math.max(0, Math.min(nx, parent.width - pip.offsetWidth));
-            ny = Math.max(0, Math.min(ny, parent.height - pip.offsetHeight));
-            pip.style.right = 'auto';
-            pip.style.left = nx + 'px';
-            pip.style.top = ny + 'px';
+
+        // Save language when changed
+        document.getElementById('targetLangSelect').addEventListener('change', (e) => {
+            localStorage.setItem('translateLang', e.target.value);
+            if (captionsEnabled) {
+                showNotif('🌐 Now translating to ' + (LANG_NAMES[e.target.value] || e.target.value));
+            }
         });
-        document.addEventListener('mouseup', () => { dragging = false; pip.style.cursor = 'grab'; });
-    })();
-</script>
+    </script>
 </body>
+
 </html>

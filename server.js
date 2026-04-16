@@ -352,9 +352,17 @@ async function startServer() {
         });
 
         // Response to a match request
-        socket.on("match-response", ({ accepted, toSocketId, roomId, acceptorUser }) => {
+        socket.on("match-response", async ({ accepted, toSocketId, roomId, acceptorUser }) => {
             if (accepted) {
-                // Tell both to join a dedicated room
+                // Room occupancy check (Max 4)
+                const room = io.sockets.adapter.rooms.get(roomId);
+                const roomSize = room ? room.size : 0;
+                
+                if (roomSize >= 4) {
+                    socket.emit("match-error", { message: "Room is full (max 4)" });
+                    return;
+                }
+
                 socket.join(roomId);
                 const targetSocket = io.sockets.sockets.get(toSocketId);
                 if (targetSocket) targetSocket.join(roomId);
@@ -364,7 +372,7 @@ async function startServer() {
                 delete lobbyUsers[toSocketId];
                 broadcastLobbyUsers();
 
-                // Redirect both — send the acceptor's info to the requester
+                // Redirect both
                 io.to(toSocketId).emit("match-accepted", { roomId, partnerUser: acceptorUser || {} });
                 socket.emit("match-accepted", { roomId });
             } else {
@@ -380,15 +388,32 @@ async function startServer() {
             socket.to(roomId).emit("peer-joined", { socketId: socket.id, user });
         });
 
-        // WebRTC signaling relay
-        socket.on("webrtc-offer", ({ roomId, offer }) => {
-            socket.to(roomId).emit("webrtc-offer", { from: socket.id, offer });
+        // WebRTC signaling relay (Targeted for Mesh)
+        socket.on("webrtc-offer", ({ roomId, to, offer }) => {
+            if (to) {
+                io.to(to).emit("webrtc-offer", { from: socket.id, offer });
+            } else {
+                socket.to(roomId).emit("webrtc-offer", { from: socket.id, offer });
+            }
         });
-        socket.on("webrtc-answer", ({ roomId, answer }) => {
-            socket.to(roomId).emit("webrtc-answer", { from: socket.id, answer });
+        socket.on("webrtc-answer", ({ roomId, to, answer }) => {
+            if (to) {
+                io.to(to).emit("webrtc-answer", { from: socket.id, answer });
+            } else {
+                socket.to(roomId).emit("webrtc-answer", { from: socket.id, answer });
+            }
         });
-        socket.on("webrtc-ice", ({ roomId, candidate }) => {
-            socket.to(roomId).emit("webrtc-ice", { from: socket.id, candidate });
+        socket.on("webrtc-ice", ({ roomId, to, candidate }) => {
+            if (to) {
+                io.to(to).emit("webrtc-ice", { from: socket.id, candidate });
+            } else {
+                socket.to(roomId).emit("webrtc-ice", { from: socket.id, candidate });
+            }
+        });
+
+        // Live translation captions relay
+        socket.on("live-caption", ({ roomId, caption }) => {
+            socket.to(roomId).emit("live-caption", caption);
         });
 
         // ===== MESSAGES =====
@@ -399,34 +424,149 @@ async function startServer() {
                 socket.to(room).emit("message", data);
 
                 const senderSession = userSessions[socket.id];
-                let receiverSession = null;
+                if (!senderSession || !senderSession.userId || senderSession.userId.startsWith('guest-')) return;
+
+                // Find all other registered users in the same room
                 for (let key in userSessions) {
-                    if (key !== socket.id) {
-                        const otherSocket = io.sockets.sockets.get(key);
-                        if (otherSocket && Array.from(otherSocket.rooms).includes(room)) {
-                            receiverSession = userSessions[key];
-                            break;
+                    if (key === socket.id) continue;
+                    
+                    const otherSocket = io.sockets.sockets.get(key);
+                    if (otherSocket && Array.from(otherSocket.rooms).includes(room)) {
+                        const receiverSession = userSessions[key];
+                        if (receiverSession && receiverSession.userId && !receiverSession.userId.startsWith('guest-')) {
+                            const msgId = 'msg_' + Date.now() + Math.random().toString(36).substr(2, 5);
+                            await database.run(
+                                'INSERT INTO messages (_id, senderId, senderName, receiverId, receiverName, text) VALUES (?, ?, ?, ?, ?, ?)',
+                                [msgId, senderSession.userId, data.sender || senderSession.user.name, receiverSession.userId, receiverSession.user.name, data.text]
+                            );
                         }
                     }
-                }
-                if (senderSession && receiverSession && senderSession.userId && receiverSession.userId && !senderSession.userId.startsWith('guest-') && !receiverSession.userId.startsWith('guest-')) {
-                    const msgId = 'msg_' + Date.now() + Math.random().toString(36).substr(2, 5);
-                    await database.run(
-                        'INSERT INTO messages (_id, senderId, senderName, receiverId, receiverName, text) VALUES (?, ?, ?, ?, ?, ?)',
-                        [msgId, senderSession.userId, data.sender || senderSession.user.name, receiverSession.userId, receiverSession.user.name, data.text]
-                    );
                 }
             } catch(err) {
                 console.error("Message error:", err);
             }
         });
 
+        // ===== FRIENDS & SOCIAL =====
+        socket.on("friend-request", async ({ toUserId }) => {
+            try {
+                const sender = userSessions[socket.id];
+                if (!sender || !sender.userId) return;
+
+                const requestId = 'req_' + Date.now();
+                await database.run(
+                    'INSERT INTO friends (_id, requesterId, recipientId, status) VALUES (?, ?, ?, ?)',
+                    [requestId, sender.userId, toUserId, 'pending']
+                );
+
+                // Notify target if online
+                for (let sid in userSessions) {
+                    if (userSessions[sid].userId === toUserId) {
+                        io.to(sid).emit("friend-request-received", { fromUser: sender.user });
+                        break;
+                    }
+                }
+            } catch (err) {
+                console.error("Friend request error:", err);
+            }
+        });
+
+        socket.on("friend-accept", async ({ fromUserId }) => {
+            try {
+                const recipient = userSessions[socket.id];
+                if (!recipient || !recipient.userId) return;
+
+                await database.run(
+                    'UPDATE friends SET status = ? WHERE requesterId = ? AND recipientId = ?',
+                    ['accepted', fromUserId, recipient.userId]
+                );
+
+                // Notify requester if online
+                for (let sid in userSessions) {
+                    if (userSessions[sid].userId === fromUserId) {
+                        io.to(sid).emit("friend-request-accepted", { byUser: recipient.user });
+                        break;
+                    }
+                }
+            } catch (err) {
+                console.error("Friend accept error:", err);
+            }
+        });
+
+        socket.on("get-friend-list", async () => {
+            try {
+                const session = userSessions[socket.id];
+                if (!session || !session.userId) return;
+
+                const sql = `
+                    SELECT u._id, u.name, u.interests, u.country 
+                    FROM users u
+                    JOIN friends f ON (f.requesterId = u._id OR f.recipientId = u._id)
+                    WHERE (f.requesterId = ? OR f.recipientId = ?) 
+                    AND f.status = 'accepted'
+                    AND u._id != ?
+                `;
+                const friends = await database.all(sql, [session.userId, session.userId, session.userId]);
+                const onlineUserIds = Object.values(userSessions).map(s => s.userId);
+                const list = friends.map(f => ({
+                    ...f,
+                    interests: JSON.parse(f.interests || '[]'),
+                    isOnline: onlineUserIds.includes(f._id)
+                }));
+                socket.emit("friend-list", list);
+            } catch (err) {
+                console.error("Get friends error:", err);
+            }
+        });
+
+        socket.on("get-chat-history", async ({ withUserId }) => {
+            try {
+                const session = userSessions[socket.id];
+                if (!session || !session.userId) return;
+                const sql = `
+                    SELECT * FROM messages 
+                    WHERE (senderId = ? AND receiverId = ?) 
+                    OR (senderId = ? AND receiverId = ?)
+                    ORDER BY timestamp ASC
+                `;
+                const messages = await database.all(sql, [session.userId, withUserId, withUserId, session.userId]);
+                socket.emit("chat-history", { withUserId, messages });
+            } catch (err) {
+                console.error("Get chat history error:", err);
+            }
+        });
+
+        socket.on("direct-message", async ({ toUserId, text }) => {
+            try {
+                const sender = userSessions[socket.id];
+                if (!sender || !sender.userId) return;
+
+                // Save to DB
+                const msgId = 'msg_' + Date.now();
+                await database.run(
+                    'INSERT INTO messages (_id, senderId, senderName, receiverId, receiverName, text) VALUES (?, ?, ?, ?, ?, ?)',
+                    [msgId, sender.userId, sender.user.name, toUserId, 'Friend', text]
+                );
+
+                // Relay to target if online
+                for (let sid in userSessions) {
+                    if (userSessions[sid].userId === toUserId) {
+                        io.to(sid).emit("direct-message", { fromUserId: sender.userId, text, senderName: sender.user.name });
+                        break;
+                    }
+                }
+            } catch (err) {
+                console.error("Direct message error:", err);
+            }
+        });
+
         // ===== DISCONNECT =====
         socket.on("disconnect", async () => {
-            // Notify call room partner
+            // Notify call room partners
             const session = userSessions[socket.id];
             if (session && session.roomId) {
-                socket.to(session.roomId).emit('partner-left', {
+                socket.to(session.roomId).emit('peer-left', {
+                    socketId: socket.id,
                     name: session.user ? session.user.name : 'Partner'
                 });
             }
