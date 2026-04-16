@@ -390,17 +390,21 @@ async function startServer() {
 
         // WebRTC signaling relay (Targeted for Mesh)
         socket.on("webrtc-offer", ({ roomId, to, offer }) => {
+            const senderSession = userSessions[socket.id];
+            const sessionUser = senderSession ? senderSession.user : null;
             if (to) {
-                io.to(to).emit("webrtc-offer", { from: socket.id, offer });
+                io.to(to).emit("webrtc-offer", { from: socket.id, offer, user: sessionUser });
             } else {
-                socket.to(roomId).emit("webrtc-offer", { from: socket.id, offer });
+                socket.to(roomId).emit("webrtc-offer", { from: socket.id, offer, user: sessionUser });
             }
         });
         socket.on("webrtc-answer", ({ roomId, to, answer }) => {
+            const senderSession = userSessions[socket.id];
+            const sessionUser = senderSession ? senderSession.user : null;
             if (to) {
-                io.to(to).emit("webrtc-answer", { from: socket.id, answer });
+                io.to(to).emit("webrtc-answer", { from: socket.id, answer, user: sessionUser });
             } else {
-                socket.to(roomId).emit("webrtc-answer", { from: socket.id, answer });
+                socket.to(roomId).emit("webrtc-answer", { from: socket.id, answer, user: sessionUser });
             }
         });
         socket.on("webrtc-ice", ({ roomId, to, candidate }) => {

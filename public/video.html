@@ -186,6 +186,31 @@
             gap: 16px;
         }
 
+        .my-name-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+        .change-profile-btn {
+            background: rgba(124, 92, 252, 0.1);
+            border: 1px solid rgba(124, 92, 252, 0.2);
+            color: var(--accent);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .change-profile-btn:hover {
+            background: var(--accent);
+            color: white;
+        }
+
         .my-profile-card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -778,7 +803,12 @@
                     </div>
                 </div>
                 <div class="my-card-info">
-                    <div class="my-name" id="myNameBadge">You</div>
+                    <div class="my-name-row">
+                        <div class="my-name" id="myNameBadge">You</div>
+                        <button class="change-profile-btn" onclick="showPermissionScreen(true)" title="Change Profile Image">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                    </div>
                     <div id="myTagsWrap"></div>
                 </div>
             </div>
@@ -908,6 +938,23 @@
     function showScreen(id) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
+    }
+
+    function showPermissionScreen(isEditing) {
+        showScreen('permissionScreen');
+        if (isEditing && currentStream) {
+            // Already have stream, set up the UI for editing a selfie
+            document.getElementById('selfieSection').classList.add('visible');
+            const btn = document.getElementById('accessBtn');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Save & Return to Lobby';
+            btn.onclick = enterLobby;
+            
+            // Wire the selfie video
+            const sv = document.getElementById('selfieVideo');
+            sv.srcObject = currentStream;
+            sv.play().catch(() => {});
+        }
     }
 
     // ===== AUTO-SKIP PERMISSION IF RETURNING USER =====

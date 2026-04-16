@@ -1571,8 +1571,8 @@
                 socket.emit('webrtc-offer', { roomId, to: socketId, offer });
             });
 
-            socket.on('webrtc-offer', async ({ from, offer }) => {
-                const pc = await createPeerConnection(from);
+            socket.on('webrtc-offer', async ({ from, offer, user: partnerUser }) => {
+                const pc = await createPeerConnection(from, partnerUser);
                 await pc.setRemoteDescription(new RTCSessionDescription(offer));
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
