@@ -333,6 +333,25 @@
                 window.location.href = `video.html?country=${selectedCountry}&interest=${selectedInterest}`;
             }
         });
+
+        // Auth Guard
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('token');
+            const userStr = localStorage.getItem('user');
+            if (!token || !userStr) {
+                window.location.href = "login.html";
+            }
+        });
+
+        // Logout logic
+        const logoutBtn = document.querySelector('.logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                localStorage.clear();
+                window.location.href = "/";
+            });
+        }
     </script>
     </div>
 </body>

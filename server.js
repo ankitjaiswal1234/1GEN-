@@ -45,6 +45,36 @@ app.use(cors({
 }))
 app.use(express.static("public"))
 
+// Interest-based matching helper
+function findBestMatch(skipperSocketId, skipperInterests) {
+    const potentialPartners = Object.values(lobbyUsers).filter(u => u.socketId !== skipperSocketId);
+    
+    if (potentialPartners.length === 0) return null;
+
+    // Normalize skipper interests to array
+    const sInterests = Array.isArray(skipperInterests) ? skipperInterests : [skipperInterests];
+
+    // Score partners
+    const scoredPartners = potentialPartners.map(p => {
+        const pInterests = Array.isArray(p.interests) ? p.interests : [p.interests];
+        const overlap = pInterests.filter(i => sInterests.includes(i));
+        return { partner: p, score: overlap.length };
+    });
+
+    // Sort by score descending
+    scoredPartners.sort((a, b) => b.score - a.score);
+
+    // Pick top tier (those with same highest score)
+    const maxScore = scoredPartners[0].score;
+    const topPartners = scoredPartners.filter(p => p.score === maxScore);
+    
+    // Pick random from top tier for variety
+    return topPartners[Math.floor(Math.random() * topPartners.length)].partner;
+}
+
+// Global user directory for interest lookup
+const lobbyUsers = {};
+
 // Create logs directory if it doesn't exist
 const logsDir = path.join(__dirname, "logs")
 if (!fs.existsSync(logsDir)) {
@@ -79,20 +109,23 @@ app.post("/send-otp", async (req,res)=>{
             return res.status(400).json({message:"Email is required"})
         }
         
+        // Normalize email
+        const normalizedEmail = email.trim().toLowerCase();
+        
         // Check if user already exists
-        const existingUser = await User.findOne({email})
+        const existingUser = await User.findOne({email: normalizedEmail})
         if (existingUser) {
             return res.status(400).json({message:"Email already registered"})
         }
         
         // Generate and send OTP
-        const otpData = await OTP.create(email)
+        const otpData = await OTP.create(normalizedEmail)
         
         // Send OTP email
-        console.log(`📧 Attempting to send OTP to: ${email}`);
-        await sendOTPEmail(email, otpData.code);
+        console.log(`📧 Attempting to send OTP to: ${normalizedEmail}`);
+        await sendOTPEmail(normalizedEmail, otpData.code);
         
-        console.log(`✓ OTP successfully sent to: ${email}`);
+        console.log(`✓ OTP successfully sent to: ${normalizedEmail}`);
         res.json({
             message:"OTP sent to your email",
             success:true
@@ -138,19 +171,23 @@ app.post("/register", async (req,res)=>{
             return res.status(400).json({message:"All fields are required"})
         }
         
-        // Check if user already exists
-        const existingUser = await User.findOne({email})
-        if (existingUser) {
-            return res.status(400).json({message:"User already exists"})
-        }
-        
-        // Create user account
+        // Normalize email
+        const normalizedEmail = email.trim().toLowerCase();
+
+        // Final check if user exists
+        const existingUser = await User.findOne({email: normalizedEmail})
+        if(existingUser) return res.status(400).json({message:"User already exists"})
+
         const hash = await bcrypt.hash(password, 10)
+        
+        // Ensure interests is an array
+        const interestArray = Array.isArray(interests) ? interests : [interests];
+
         const user = await User.create({
             name,
-            email,
+            email: normalizedEmail,
             password:hash,
-            interests: [interests], // Convert single interest to array
+            interests: interestArray,
             emailVerified: true
         })
         
@@ -198,7 +235,8 @@ app.post("/resend-otp", async (req,res)=>{
 // User login with session tracking
 app.post("/login", async (req,res)=>{
 
-const {email,password} = req.body
+const email = req.body.email ? req.body.email.trim().toLowerCase() : '';
+const password = req.body.password;
 
 try {
 const user = await User.findOne({email})
@@ -309,8 +347,6 @@ async function startServer() {
     
     let waitingUsers = []
     let userSessions = {}
-    // Lobby: users browsing profiles (not yet in a call)
-    let lobbyUsers = {}
 
     function broadcastLobbyUsers() {
         const list = Object.values(lobbyUsers).map(u => ({
@@ -642,24 +678,30 @@ async function startServer() {
             // Notify others
             socket.to(roomId).emit("peer-left", { socketId: socket.id, name: userSessions[socket.id]?.user?.name || 'Partner' });
 
-            // Automatically try to match them with someone in the lobby
-            const potentialPartners = Object.values(lobbyUsers).filter(u => u.socketId !== socket.id);
-            if (potentialPartners.length > 0) {
-                const partner = potentialPartners[Math.floor(Math.random() * potentialPartners.length)];
-                const newRoomId = 'room_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+            // Automatically try to match them with someone in the lobby using interest-based logic
+            const skipper = lobbyUsers[socket.id];
+            const partner = findBestMatch(socket.id, skipper ? skipper.interests : []);
+
+            if (partner) {
+                const newRoomId = `room_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
                 
-                // Redirect skipper
-                socket.emit("match-accepted", { roomId: newRoomId, partnerUser: partner });
-                
-                // Redirect partner (they don't need a toast for "Skip" connectivity, we just auto-match them if they are in lobby)
+                // Move both to new room
+                socket.join(newRoomId);
                 const partnerSocket = io.sockets.sockets.get(partner.socketId);
+                
                 if (partnerSocket) {
+                    partnerSocket.join(newRoomId);
+                    
+                    // Remove partner from lobby list as they are now in a call
                     delete lobbyUsers[partner.socketId];
                     broadcastLobbyUsers();
-                    partnerSocket.emit("match-accepted", { roomId: newRoomId, partnerUser: userSessions[socket.id].user });
+
+                    // Inform both
+                    socket.emit("match-accepted", { roomId: newRoomId, partnerUser: partner });
+                    partnerSocket.emit("match-accepted", { roomId: newRoomId, partnerUser: skipper || { name: 'Unknown', avatar: null } });
                 }
             } else {
-                // No one available, send them back to lobby
+                // Stay in lobby if no one available
                 socket.emit("no-partners-available");
             }
         });

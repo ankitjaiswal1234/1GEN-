@@ -1669,6 +1669,20 @@
         </div>
     </div>
 
+    <!-- Friend Request Overlay -->
+    <div class="rating-overlay" id="friendRequestOverlay">
+        <div class="rating-card">
+            <div class="rating-avatar" id="frAvatar">👤</div>
+            <div class="rating-title"><span id="frName">Someone</span></div>
+            <div class="rating-text">Sent you a friend request!</div>
+            
+            <div class="rating-actions">
+                <button class="rating-btn rating-btn-primary" onclick="acceptFriendRequest()">Accept</button>
+                <button class="rating-btn rating-btn-secondary" onclick="declineFriendRequest()">Decline</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         // ===== STATE =====
@@ -1690,10 +1704,27 @@
         let nsfwModel = null;
         let isModerationActive = true;
         let safetyShieldIgnored = false;
+        let isLeavingIntentionally = false;
         let selfieSegmentation = null;
         let currentEffect = 'none';
         let processingCanvas = document.createElement('canvas');
-        let processingCtx = processingCanvas.getContext('2d');
+        let processingCtx = processingCanvas.getContext('2d', { willReadFrequently: true });
+        let displayCanvas = document.createElement('canvas');
+        let displayCtx = displayCanvas.getContext('2d');
+        let rawVideo = document.createElement('video');
+        rawVideo.autoplay = true;
+        rawVideo.playsInline = true;
+        rawVideo.muted = true;
+        rawVideo.style.position = 'fixed';
+        rawVideo.style.top = '-9999px';
+        rawVideo.style.left = '-9999px';
+        rawVideo.style.width = '640px';
+        rawVideo.style.height = '480px';
+        rawVideo.style.opacity = '1';
+        rawVideo.style.pointerEvents = 'none';
+        window.addEventListener('DOMContentLoaded', () => {
+            document.body.appendChild(rawVideo);
+        });
         let outputStream = null;
 
         // Background Images
@@ -1765,6 +1796,8 @@
         async function init() {
             try {
                 currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                rawVideo.srcObject = currentStream;
+                rawVideo.play().catch(e => console.warn('raw video play err:', e));
                 document.getElementById('myVideo').srcObject = currentStream;
             } catch (e) {
                 showNotif('⚠️ Could not access camera — audio only');
@@ -1848,17 +1881,29 @@
             if (effect === 'none') {
                 stopEffectLoop();
             } else {
+                // Ensure outputStream exists and is active for the peers
+                if (!outputStream && displayCanvas) {
+                    outputStream = displayCanvas.captureStream(25);
+                }
+                if (outputStream) {
+                    replaceSenderTrack(outputStream.getVideoTracks()[0]);
+                    document.getElementById('myVideo').srcObject = outputStream;
+                }
                 startEffectLoop();
             }
         }
 
         let effectInterval = null;
+        let isProcessingEffect = false;
         function startEffectLoop() {
             if (effectInterval) return;
             effectInterval = setInterval(async () => {
-                const myVideo = document.getElementById('localVideo');
-                if (myVideo && currentEffect !== 'none') {
-                    await selfieSegmentation.send({ image: myVideo });
+                if (isProcessingEffect) return;
+                if (rawVideo && rawVideo.videoWidth > 0 && rawVideo.readyState >= 2 && currentEffect !== 'none') {
+                    isProcessingEffect = true;
+                    try { await selfieSegmentation.send({ image: rawVideo }); }
+                    catch(e) { console.warn('Segmentation error:', e); }
+                    isProcessingEffect = false;
                 }
             }, 40); // ~25 FPS
         }
@@ -1868,42 +1913,51 @@
             effectInterval = null;
             // Revert to raw stream
             replaceSenderTrack(currentStream.getVideoTracks()[0]);
+            document.getElementById('myVideo').srcObject = currentStream;
         }
 
         function onSegmentationResults(results) {
-            const myVideo = document.getElementById('localVideo');
-            if (!myVideo) return;
+            if (!rawVideo || rawVideo.videoWidth === 0) return;
             
-            processingCanvas.width = myVideo.videoWidth || 640;
-            processingCanvas.height = myVideo.videoHeight || 480;
+            const w = rawVideo.videoWidth;
+            const h = rawVideo.videoHeight;
+
+            if (processingCanvas.width !== w || processingCanvas.height !== h) {
+                processingCanvas.width = w;
+                processingCanvas.height = h;
+                displayCanvas.width = w;
+                displayCanvas.height = h;
+            }
             
             processingCtx.save();
-            processingCtx.clearRect(0, 0, processingCanvas.width, processingCanvas.height);
+            processingCtx.clearRect(0, 0, w, h);
             
-            // Draw Masked Content
-            processingCtx.drawImage(results.segmentationMask, 0, 0, processingCanvas.width, processingCanvas.height);
-            
-            // Draw Background
-            processingCtx.globalCompositeOperation = 'source-out';
+            // 1. Draw your custom background (Blur or Image)
             if (currentEffect === 'blur') {
                 processingCtx.filter = 'blur(15px)';
-                processingCtx.drawImage(results.image, 0, 0, processingCanvas.width, processingCanvas.height);
+                processingCtx.drawImage(results.image, 0, 0, w, h);
                 processingCtx.filter = 'none';
             } else if (bgImages[currentEffect]) {
-                processingCtx.drawImage(bgImages[currentEffect], 0, 0, processingCanvas.width, processingCanvas.height);
+                processingCtx.drawImage(bgImages[currentEffect], 0, 0, w, h);
             }
-            
-            // Draw Foreground (User)
-            processingCtx.globalCompositeOperation = 'destination-atop';
-            processingCtx.drawImage(results.image, 0, 0, processingCanvas.width, processingCanvas.height);
+
+            // 2. Clear out the background where the person is (using the segmentation mask)
+            processingCtx.globalCompositeOperation = 'destination-in';
+            processingCtx.drawImage(results.segmentationMask, 0, 0, w, h);
+
+            // 3. Draw the original person atop the new background
+            // We use destination-over so the result.image (person) is drawn "behind" the mask (which currently contains the background)
+            // Wait, standard way:
+            // - Draw BG
+            // - Draw Mask with source-in (keeps only BG where person is NOT) -> NO.
+            // Simplified logic:
+            processingCtx.globalCompositeOperation = 'destination-over';
+            processingCtx.drawImage(results.image, 0, 0, w, h);
             
             processingCtx.restore();
-            
-            // If outputStream not yet created, create it
-            if (!outputStream && processingCanvas) {
-                outputStream = processingCanvas.captureStream(25);
-                replaceSenderTrack(outputStream.getVideoTracks()[0]);
-            }
+
+            // DOUBLE BUFFERING: Copy finished frame to display canvas in one atomic operation
+            displayCtx.drawImage(processingCanvas, 0, 0);
         }
 
         function replaceSenderTrack(newTrack) {
@@ -1922,6 +1976,25 @@
                 }
                 earlyCandidates.delete(socketId);
             }
+        }
+
+        let pendingFriendRequestId = null;
+
+        function acceptFriendRequest() {
+            if (pendingFriendRequestId) {
+                socket.emit('friend-accept', { fromUserId: pendingFriendRequestId });
+                showNotif('✅ Friend request accepted!');
+            }
+            document.getElementById('friendRequestOverlay').classList.remove('visible');
+            pendingFriendRequestId = null;
+        }
+
+        function declineFriendRequest() {
+            if (pendingFriendRequestId) {
+                socket.emit('friend-decline', { fromUserId: pendingFriendRequestId });
+            }
+            document.getElementById('friendRequestOverlay').classList.remove('visible');
+            pendingFriendRequestId = null;
         }
 
         // ===== SOCKET HANDLERS =====
@@ -1974,6 +2047,9 @@
             });
 
             socket.on('friend-request-received', ({ fromUser }) => {
+                pendingFriendRequestId = fromUser._id || fromUser.id;
+                document.getElementById('frName').textContent = fromUser.name;
+                document.getElementById('friendRequestOverlay').classList.add('visible');
                 showNotif(`🤝 Friend request from ${fromUser.name}`);
             });
 
@@ -1998,7 +2074,8 @@
             });
 
             socket.on('disconnect', () => {
-                showNotif('Disconnection: Turning to lobby...');
+                if (isLeavingIntentionally) return;
+                showNotif('Disconnection: Returning to lobby...');
                 setTimeout(() => location.href = '/video.html', 3000);
             });
 
@@ -2125,8 +2202,24 @@
                 addBtn.style.display = 'none';
             }
 
+            const rateBtn = document.createElement('button');
+            rateBtn.className = 'add-friend-btn';
+            rateBtn.style.marginLeft = '8px';
+            rateBtn.style.background = '#f59e0b';
+            rateBtn.innerHTML = '<i class="fas fa-star"></i>';
+            if (partnerUser && partnerUser._id) {
+                rateBtn.onclick = () => showRatingModal(partnerUser);
+            } else {
+                rateBtn.style.display = 'none';
+            }
+
+            const btnGroup = document.createElement('div');
+            btnGroup.style.display = 'flex';
+            btnGroup.appendChild(rateBtn);
+            btnGroup.appendChild(addBtn);
+
             overlay.appendChild(nameSpan);
-            overlay.appendChild(addBtn);
+            overlay.appendChild(btnGroup);
             wrap.appendChild(video);
             wrap.appendChild(playOverlay);
             wrap.appendChild(overlay);
@@ -2361,6 +2454,7 @@
         }
 
         function exitCallAndCleanup(url) {
+            isLeavingIntentionally = true;
             if (currentStream) currentStream.getTracks().forEach(t => t.stop());
             if (screenStream) screenStream.getTracks().forEach(t => t.stop());
             peers.forEach(pc => pc.close());
@@ -2370,31 +2464,55 @@
             if (url) location.href = url;
         }
 
+        function endCall() {
+            document.getElementById('endConfirmOverlay').classList.add('visible');
+        }
+
         function skipMatch() {
-            if (matchedPartner) {
-                // Modified skip: show rating first, then redirect in background?
-                // Actually, skip should be fast. I'll just emit skip-call and also show rating?
-                // Better: Show rating modal first, and "Submit" will trigger the redirect.
+            // Stop current animations/timers if any
+            stopCallTimer();
+            
+            if (matchedPartner && matchedPartner._id) {
+                // Show rating modal first, then it will trigger skip-call upon submission
                 showRatingModal(matchedPartner);
                 
-                // We'll use a special flag for skip-and-match
-                document.getElementById('submitRatingBtn').onclick = () => {
+                // Override the submit button for skip behavior
+                const submitBtn = document.getElementById('submitRatingBtn');
+                const originalOnClick = submitBtn.onclick;
+                
+                submitBtn.onclick = () => {
+                    // Emit rating
                     socket.emit('rate-user', {
                         targetUserId: pendingRatingTarget,
                         stars: selectedStars,
                         liked: hasHeart
                     });
+                    
+                    // Emit skip
+                    isLeavingIntentionally = true;
                     socket.emit('skip-call', { roomId });
+                    
                     document.getElementById('ratingOverlay').classList.remove('visible');
                     showNotif('⏭️ Finding next match...');
+                    
+                    // Restore original onclick for next time
+                    submitBtn.onclick = originalOnClick;
                 };
             } else {
+                // Just skip if no partner info
+                isLeavingIntentionally = true;
                 socket.emit('skip-call', { roomId });
+                showNotif('⏭️ Finding next match...');
             }
         }
 
         function confirmEndCall() {
-            showRatingModal(matchedPartner, '/video.html?returning=1');
+            document.getElementById('endConfirmOverlay').classList.remove('visible');
+            if (matchedPartner) {
+                showRatingModal(matchedPartner, '/video.html?returning=1');
+            } else {
+                exitCallAndCleanup('/video.html');
+            }
         }
 
         function cancelEndCall() {

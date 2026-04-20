@@ -28,6 +28,7 @@
                 <a href="#security">Privacy</a>
             </div>
             <div class="nav-btns">
+                <a href="https://video-meet-rqgw.onrender.com" class="btn btn-outline">Meetings</a>
                 <a href="login.html" class="btn btn-outline">Login</a>
                 <a href="register.html" class="btn btn-primary">Join Platform</a>
             </div>
@@ -43,6 +44,7 @@
         <a href="#features">Technology</a>
         <a href="#about">Global</a>
         <a href="#security">Privacy</a>
+        <a href="https://video-meet-rqgw.onrender.com">Meetings</a>
         <a href="login.html">Login</a>
         <a href="register.html">Sign Up</a>
     </div>
@@ -214,6 +216,50 @@
         }, observerOptions);
 
         document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // Session check for Landing Page
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('token');
+            const userStr = localStorage.getItem('user');
+            if (token && userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    const navBtns = document.querySelector('.nav-btns');
+                    const mobileNav = document.getElementById('mobileNav');
+                    
+                    const dashboardBtn = `<a href="dashboard.html" class="btn btn-primary">Dashboard (Welcome, ${user.name.split(' ')[0]})</a>`;
+                    const logoutBtn = `<a href="#" onclick="logout(); return false;" class="btn btn-outline" style="margin-left: 10px;">Logout</a>`;
+                    
+                    if (navBtns) navBtns.innerHTML = dashboardBtn + logoutBtn;
+                    if (mobileNav) {
+                        mobileNav.innerHTML = `
+                            <a href="#features">Technology</a>
+                            <a href="#about">Global</a>
+                            <a href="dashboard.html" style="color: var(--accent);">Go to Dashboard</a>
+                            <a href="#" onclick="logout(); return false;">Logout</a>
+                        `;
+                    }
+                    
+                    // Update Hero CTA
+                    const heroCta = document.querySelector('.hero-cta');
+                    if (heroCta) {
+                       heroCta.innerHTML = `<a href="dashboard.html" class="btn btn-primary">Go to Dashboard</a><a href="#features" class="btn btn-outline">Explore Features</a>`;
+                    }
+                    const ctaSection = document.querySelector('.cta-section .cta-card');
+                    if (ctaSection) {
+                        ctaSection.querySelector('a').href = 'dashboard.html';
+                        ctaSection.querySelector('a').textContent = 'Go to Your Dashboard';
+                    }
+                } catch (e) {
+                    console.error("Session check error:", e);
+                }
+            }
+        });
+
+        function logout() {
+            localStorage.clear();
+            window.location.reload();
+        }
     </script>
     <script src="landing_interactivity.js"></script>
 </body>
