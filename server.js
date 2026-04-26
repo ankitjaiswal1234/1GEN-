@@ -20,6 +20,7 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || "*"
 const database = require("./database")
 
 // Load models (now using SQLite)
+const { Op } = require("sequelize")
 const User = require("./models/User")
 const OTP = require("./models/OTP")
 const Message = require("./models/Message")
@@ -329,9 +330,13 @@ app.get("/api/history", async (req, res) => {
         const userId = req.headers['user-id']; 
         if (!userId || userId.startsWith('guest-')) return res.status(401).json({message: "Unauthorized or guest"});
 
-        const messages = await Message.find({
-            $or: [{ senderId: userId }, { receiverId: userId }]
-        }).sort({ timestamp: -1 }).limit(200);
+        const messages = await Message.findAll({
+            where: {
+                [Op.or]: [{ senderId: userId }, { receiverId: userId }]
+            },
+            order: [['timestamp', 'DESC']],
+            limit: 200
+        });
         
         res.json(messages);
     } catch(err) {
@@ -548,18 +553,24 @@ async function startServer() {
                 const session = userSessions[socket.id];
                 if (!session || !session.userId) return;
 
-                const friendships = await Friend.find({
-                    $or: [
-                        { requesterId: session.userId, status: 'accepted' },
-                        { recipientId: session.userId, status: 'accepted' }
-                    ]
+                const friendships = await Friend.findAll({
+                    where: {
+                        [Op.or]: [
+                            { requesterId: session.userId, status: 'accepted' },
+                            { recipientId: session.userId, status: 'accepted' }
+                        ]
+                    }
                 });
 
                 const friendIds = friendships.map(f => 
                     f.requesterId === session.userId ? f.recipientId : f.requesterId
                 );
 
-                const friends = await User.find({ _id: { $in: friendIds } });
+                const friends = await User.findAll({ 
+                    where: { 
+                        _id: { [Op.in]: friendIds } 
+                    } 
+                });
                 const onlineUserIds = Object.values(userSessions).map(s => s.userId);
                 
                 const list = friends.map(f => ({
@@ -581,13 +592,19 @@ async function startServer() {
                 const session = userSessions[socket.id];
                 if (!session || !session.userId) return;
 
-                const pendingFriends = await Friend.find({ 
-                    recipientId: session.userId, 
-                    status: 'pending' 
+                const pendingFriends = await Friend.findAll({ 
+                    where: {
+                        recipientId: session.userId, 
+                        status: 'pending' 
+                    }
                 });
                 
                 const requesterIds = pendingFriends.map(f => f.requesterId);
-                const requesters = await User.find({ _id: { $in: requesterIds } });
+                const requesters = await User.findAll({ 
+                    where: {
+                        _id: { [Op.in]: requesterIds }
+                    }
+                });
 
                 const pending = pendingFriends.map(f => {
                     const user = requesters.find(u => u._id === f.requesterId);
@@ -625,9 +642,12 @@ async function startServer() {
                 if (!session || !session.userId) return;
 
                 // Find all messages involving the user
-                const recentMessages = await Message.find({
-                    $or: [{ senderId: session.userId }, { receiverId: session.userId }]
-                }).sort({ timestamp: -1 });
+                const recentMessages = await Message.findAll({
+                    where: {
+                        [Op.or]: [{ senderId: session.userId }, { receiverId: session.userId }]
+                    },
+                    order: [['timestamp', 'DESC']]
+                });
 
                 // Group by partner
                 const partnerMap = new Map();
@@ -643,7 +663,11 @@ async function startServer() {
                 }
 
                 const partnerIds = Array.from(partnerMap.keys());
-                const users = await User.find({ _id: { $in: partnerIds } });
+                const users = await User.findAll({ 
+                    where: {
+                        _id: { [Op.in]: partnerIds }
+                    }
+                });
 
                 const chats = users.map(u => ({
                     _id: u._id,
@@ -665,12 +689,15 @@ async function startServer() {
                 const session = userSessions[socket.id];
                 if (!session || !session.userId) return;
                 
-                const messages = await Message.find({
-                    $or: [
-                        { senderId: session.userId, receiverId: withUserId },
-                        { senderId: withUserId, receiverId: session.userId }
-                    ]
-                }).sort({ timestamp: 1 });
+                const messages = await Message.findAll({
+                    where: {
+                        [Op.or]: [
+                            { senderId: session.userId, receiverId: withUserId },
+                            { senderId: withUserId, receiverId: session.userId }
+                        ]
+                    },
+                    order: [['timestamp', 'ASC']]
+                });
                 
                 socket.emit("chat-history", { withUserId, messages });
             } catch (err) {

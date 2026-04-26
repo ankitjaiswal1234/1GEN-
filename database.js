@@ -1,60 +1,66 @@
-const mongoose = require('mongoose');
+const { Sequelize } = require('sequelize');
+const path = require('path');
 
-// MongoDB URI - set this in your environment variables
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/video-platform';
+// Connection string from Render or local environment
+const DATABASE_URL = process.env.DATABASE_URL;
 
-let dbReady = false;
+let sequelize;
 
-// Initialize MongoDB connection
-async function connectDB() {
-    try {
-        await mongoose.connect(MONGODB_URI, {
-            // Options removed in Mongoose 6+ but kept for backward compatibility if needed
-            // useNewUrlParser: true,
-            // useUnifiedTopology: true
-        });
-        console.log('✓ MongoDB connected successfully');
-        dbReady = true;
-    } catch (err) {
-        console.error('✗ MongoDB connection error:', err);
-    }
+if (DATABASE_URL) {
+    console.log('🔗 Connecting to PostgreSQL...');
+    sequelize = new Sequelize(DATABASE_URL, {
+        dialect: 'postgres',
+        protocol: 'postgres',
+        dialectOptions: {
+            ssl: {
+                require: true,
+                rejectUnauthorized: false // Required for Render/Heroku PostgreSQL
+            }
+        },
+        logging: false
+    });
+} else {
+    console.log('💾 DATABASE_URL not found. Falling back to local SQLite for development...');
+    sequelize = new Sequelize({
+        dialect: 'sqlite',
+        storage: path.join(__dirname, 'data', 'video-platform.db'),
+        logging: false
+    });
 }
 
-connectDB();
-
 const database = {
-    // Check if database is ready
-    isReady() {
-        return dbReady;
-    },
+    sequelize,
+    isReady: false,
     
-    // Wait for database to be ready
     async waitForReady() {
-        return new Promise((resolve) => {
-            const checkReady = () => {
-                if (dbReady) resolve();
-                else setTimeout(checkReady, 100);
-            };
-            checkReady();
-        });
+        if (this.isReady) return true;
+        try {
+            await sequelize.authenticate();
+            // Sync models (creates tables if they don't exist)
+            await sequelize.sync({ alter: true });
+            this.isReady = true;
+            console.log('✅ Database connection established and models synced.');
+            return true;
+        } catch (error) {
+            console.error('❌ Unable to connect to the database:', error);
+            throw error;
+        }
     },
 
-    // Mock direct operations for backward compatibility (where possible)
-    // Note: Direct SQL will NOT work. These are here just to prevent crashes
-    // until we migrate all direct calls to models.
+    // Mock methods for backward compatibility if needed
     async run(sql, params = []) {
-        console.warn('⚠️ Direct SQL run() called - this is no longer supported with MongoDB. Please use Models.');
-        return { lastID: null, changes: 0 };
-    },
-
-    async get(sql, params = []) {
-        console.warn('⚠️ Direct SQL get() called - this is no longer supported with MongoDB. Please use Models.');
-        return null;
+        console.warn('⚠️ Direct SQL execution is deprecated. Use models instead.');
+        return sequelize.query(sql, { replacements: params });
     },
 
     async all(sql, params = []) {
-        console.warn('⚠️ Direct SQL all() called - this is no longer supported with MongoDB. Please use Models.');
-        return [];
+        console.warn('⚠️ Direct SQL execution is deprecated. Use models instead.');
+        return sequelize.query(sql, { replacements: params, type: Sequelize.QueryTypes.SELECT });
+    },
+
+    async get(sql, params = []) {
+        const results = await this.all(sql, params);
+        return results[0] || null;
     }
 };
 

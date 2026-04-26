@@ -1,15 +1,20 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../database');
 
-const messageSchema = new mongoose.Schema({
-    _id: { type: String, default: () => 'msg_' + Date.now() + Math.random().toString(36).substr(2, 5) },
-    senderId: { type: String, required: true },
-    senderName: String,
-    receiverId: { type: String, required: true },
-    receiverName: String,
-    text: { type: String, required: true },
-    timestamp: { type: Date, default: Date.now }
+const Message = sequelize.define('Message', {
+    _id: {
+        type: DataTypes.STRING,
+        primaryKey: true,
+        defaultValue: () => 'msg_' + Date.now() + Math.random().toString(36).substr(2, 5)
+    },
+    senderId: { type: DataTypes.STRING, allowNull: false },
+    senderName: DataTypes.STRING,
+    receiverId: { type: DataTypes.STRING, allowNull: false },
+    receiverName: DataTypes.STRING,
+    text: { type: DataTypes.TEXT, allowNull: false },
+    timestamp: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+}, {
+    timestamps: true
 });
-
-const Message = mongoose.model('Message', messageSchema);
 
 module.exports = Message;

@@ -1,35 +1,36 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../database');
 
-const userDataSchema = new mongoose.Schema({
-    _id: { type: String, default: () => 'ud_' + Date.now() + Math.random().toString(36).substr(2, 5) },
-    userId: { type: String, required: true },
-    userName: String,
-    userEmail: String,
-    activityType: String,
-    action: String, // Keep for backward compatibility
-    description: String,
-    dataCategory: String,
-    timestamp: { type: Date, default: Date.now },
-    metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
-    duration: Number,
-    status: String,
-    deviceInfo: {
-        userAgent: String,
-        platform: String
+const UserData = sequelize.define('UserData', {
+    _id: {
+        type: DataTypes.STRING,
+        primaryKey: true,
+        defaultValue: () => 'ud_' + Date.now() + Math.random().toString(36).substr(2, 5)
     },
-    location: {
-        ipAddress: String,
-        country: String,
-        city: String
-    },
-    details: { type: mongoose.Schema.Types.Mixed, default: {} } // Keep for backward compatibility
+    userId: { type: DataTypes.STRING, allowNull: false },
+    userName: DataTypes.STRING,
+    userEmail: DataTypes.STRING,
+    activityType: DataTypes.STRING,
+    action: DataTypes.STRING,
+    description: DataTypes.TEXT,
+    dataCategory: DataTypes.STRING,
+    timestamp: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    metadata: { type: DataTypes.JSONB, defaultValue: {} },
+    duration: DataTypes.INTEGER,
+    status: DataTypes.STRING,
+    deviceInfo: { type: DataTypes.JSONB, defaultValue: {} },
+    location: { type: DataTypes.JSONB, defaultValue: {} },
+    details: { type: DataTypes.JSONB, defaultValue: {} }
+}, {
+    timestamps: true
 });
 
 // Static methods for backward compatibility
-userDataSchema.statics.findByUserId = function(userId) {
-    return this.find({ userId }).sort({ timestamp: -1 });
+UserData.findByUserId = function(userId) {
+    return this.findAll({ 
+        where: { userId },
+        order: [['timestamp', 'DESC']]
+    });
 };
-
-const UserData = mongoose.model('UserData', userDataSchema);
 
 module.exports = UserData;

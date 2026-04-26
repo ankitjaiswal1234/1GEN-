@@ -1,22 +1,31 @@
-const mongoose = require('mongoose');
+const { DataTypes, Op } = require('sequelize');
+const { sequelize } = require('../database');
 
-const otpSchema = new mongoose.Schema({
-    _id: { type: String, default: () => 'otp_' + Date.now() },
-    email: { type: String, required: true, lowercase: true, trim: true },
-    code: { type: String, required: true },
-    expiresAt: { type: Date, required: true },
-    verified: { type: Number, default: 0 },
-    createdAt: { type: Date, default: Date.now }
+const OTP = sequelize.define('OTP', {
+    _id: {
+        type: DataTypes.STRING,
+        primaryKey: true,
+        defaultValue: () => 'otp_' + Date.now()
+    },
+    email: { type: DataTypes.STRING, allowNull: false },
+    code: { type: DataTypes.STRING, allowNull: false },
+    expiresAt: { type: DataTypes.DATE, allowNull: false },
+    verified: { type: DataTypes.INTEGER, defaultValue: 0 }
+}, {
+    timestamps: true
 });
 
 // Static methods for backward compatibility
-otpSchema.statics.verify = async function(email, code) {
+OTP.verify = async function(email, code) {
     const otp = await this.findOne({ 
-        email, 
-        code, 
-        verified: 0, 
-        expiresAt: { $gt: new Date() } 
-    }).sort({ createdAt: -1 });
+        where: {
+            email: email.toLowerCase(), 
+            code, 
+            verified: 0, 
+            expiresAt: { [Op.gt]: new Date() } 
+        },
+        order: [['createdAt', 'DESC']]
+    });
 
     if (!otp) {
         throw new Error('Invalid or expired OTP');
@@ -27,14 +36,19 @@ otpSchema.statics.verify = async function(email, code) {
     return true;
 };
 
-otpSchema.statics.deleteExpired = function() {
-    return this.deleteMany({ expiresAt: { $lt: new Date() } });
+OTP.deleteExpired = function() {
+    return this.destroy({ 
+        where: { 
+            expiresAt: { [Op.lt]: new Date() } 
+        } 
+    });
 };
 
-otpSchema.statics.getByEmail = function(email) {
-    return this.findOne({ email }).sort({ createdAt: -1 });
+OTP.getByEmail = function(email) {
+    return this.findOne({ 
+        where: { email: email.toLowerCase() },
+        order: [['createdAt', 'DESC']]
+    });
 };
-
-const OTP = mongoose.model('OTP', otpSchema);
 
 module.exports = OTP;

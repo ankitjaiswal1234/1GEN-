@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Direct Login Test (MongoDB version)
- * Tests registration and login with the new MongoDB/Mongoose setup
+ * Direct Login Test (PostgreSQL/Sequelize version)
+ * Tests registration and login with the new PostgreSQL setup
  */
 
 const db = require('./database');
@@ -11,23 +11,23 @@ const bcrypt = require('bcryptjs');
 
 async function testLoginFlow() {
     console.log(`\n╔════════════════════════════════════════════════════╗`);
-    console.log(`║   MONGODB LOGIN TEST (Mongoose Level)            ║`);
+    console.log(`║   POSTGRES LOGIN TEST (Sequelize Level)          ║`);
     console.log(`╚════════════════════════════════════════════════════╝\n`);
 
     try {
-        console.log('⏳ Waiting for MongoDB connection...');
+        console.log('⏳ Waiting for Database connection...');
         await db.waitForReady();
-        console.log('✓ MongoDB is ready\n');
+        console.log('✓ Database is ready\n');
 
         // Create test user
-        const testEmail = `mongo-test-${Date.now()}@test.com`;
+        const testEmail = `pg-test-${Date.now()}@test.com`;
         const testPassword = 'TestPassword123!';
         
         console.log('📝 Creating test user directly...');
         // Hash password before saving
         const hashedPassword = await bcrypt.hash(testPassword, 10);
         const user = await User.create({
-            name: 'Mongo Test User',
+            name: 'Postgres Test User',
             email: testEmail,
             password: hashedPassword,
             interests: ['movie'],
@@ -41,7 +41,7 @@ async function testLoginFlow() {
 
         // Find user
         console.log('🔍 Finding user by email...');
-        const foundUser = await User.findOne({email: testEmail});
+        const foundUser = await User.findOne({ where: { email: testEmail } });
         
         if (foundUser) {
             console.log(`✅ User found: ${foundUser._id}`);
@@ -70,14 +70,15 @@ async function testLoginFlow() {
         foundUser.ipAddress = '192.168.1.1';
         foundUser.country = 'Test Country (TC)';
         
-        // Mongoose handle arrays differently, ensure it's initialized
-        if (!foundUser.loginSessions) foundUser.loginSessions = [];
-        foundUser.loginSessions.push({
+        // Sequelize handle arrays naturally
+        const sessions = [...(foundUser.loginSessions || [])];
+        sessions.push({
             timestamp: new Date(),
             ipAddress: '192.168.1.1',
             country: 'Test Country (TC)',
             duration: 0
         });
+        foundUser.loginSessions = sessions;
 
         await foundUser.save();
         console.log(`✅ Login session saved`);
@@ -86,7 +87,7 @@ async function testLoginFlow() {
 
         // Verify updated data
         console.log('📊 Verifying updated data...');
-        const updatedUser = await User.findOne({email: testEmail});
+        const updatedUser = await User.findOne({ where: { email: testEmail } });
         console.log(`✅ Updated user retrieved`);
         console.log(`   Login Count: ${updatedUser.loginCount}`);
         console.log(`   Country: ${updatedUser.country}`);
@@ -94,7 +95,7 @@ async function testLoginFlow() {
         console.log(`   Sessions: ${updatedUser.loginSessions.length}\n`);
 
         console.log(`╔════════════════════════════════════════════════════╗`);
-        console.log(`║   ✅ ALL MONGODB TESTS PASSED SUCCESSFULLY!       ║`);
+        console.log(`║   ✅ ALL POSTGRES TESTS PASSED SUCCESSFULLY!      ║`);
         console.log(`╚════════════════════════════════════════════════════╝\n`);
 
         process.exit(0);

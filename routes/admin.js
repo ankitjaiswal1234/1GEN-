@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { Op } = require("sequelize");
 const User = require("../models/User");
 const Admin = require("../models/Admin");
 const UserData = require("../models/UserData");
@@ -18,7 +19,7 @@ const verifyAdmin = async (req, res, next) => {
         if (!token) return res.status(401).json({ message: "No token provided" });
 
         const decoded = jwt.verify(token, ADMIN_JWT_SECRET);
-        const admin = await Admin.findById(decoded.id);
+        const admin = await Admin.findByPk(decoded.id);
 
         if (!admin) return res.status(403).json({ message: "Admin not found" });
 
@@ -97,9 +98,9 @@ router.post("/admin-login", async (req, res) => {
 // Get All Users (Admin Only)
 router.get("/admin/users", verifyAdmin, async (req, res) => {
     try {
-        const users = await User.find();
+        const users = await User.findAll();
         const usersWithStats = users.map(user => {
-            const u = { ...user };
+            const u = user.get({ plain: true });
             delete u.password;
             return {
                 ...u,
@@ -117,13 +118,13 @@ router.get("/admin/users", verifyAdmin, async (req, res) => {
 // Get User Details with Login Sessions (Admin Only)
 router.get("/admin/users/:userId", verifyAdmin, async (req, res) => {
     try {
-        const user = await User.findById(req.params.userId);
+        const user = await User.findByPk(req.params.userId);
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        const u = { ...user };
+        const u = user.get({ plain: true });
         delete u.password;
 
         const userDetails = {
@@ -145,7 +146,7 @@ router.get("/admin/users/:userId", verifyAdmin, async (req, res) => {
 // Get Dashboard Statistics with Country Data (Admin Only)
 router.get("/admin/dashboard-stats", verifyAdmin, async (req, res) => {
     try {
-        const users = await User.find();
+        const users = await User.findAll();
         const totalUsers = users.length;
         const activeUsersCount = users.filter(u => u.isActive === 1).length;
         const inactiveUsersCount = totalUsers - activeUsersCount;
@@ -216,7 +217,7 @@ router.get("/admin/dashboard-stats", verifyAdmin, async (req, res) => {
 // Get Country Statistics (Admin Only)
 router.get("/admin/country-stats", verifyAdmin, async (req, res) => {
     try {
-        const users = await User.find();
+        const users = await User.findAll();
         
         const countryStats = {};
         let totalSessions = 0;
@@ -290,7 +291,7 @@ router.get("/admin/country-stats", verifyAdmin, async (req, res) => {
 // Get User Statistics (Admin Only)
 router.get("/admin/user-stats", verifyAdmin, async (req, res) => {
     try {
-        const users = await User.find();
+        const users = await User.findAll();
 
         const stats = {
             totalUsers: users.length,
@@ -353,7 +354,7 @@ router.get("/admin/user-stats", verifyAdmin, async (req, res) => {
 // Get Dashboard Statistics (Admin Only)
 router.get("/admin/statistics", verifyAdmin, async (req, res) => {
     try {
-        const users = await User.find();
+        const users = await User.findAll();
         const totalUsers = users.length;
         const activeUsersCount = users.filter(u => u.isActive === 1 || u.isActive === true).length;
 
@@ -399,7 +400,7 @@ router.get("/admin/statistics", verifyAdmin, async (req, res) => {
 // Get User Login History (Admin Only)
 router.get("/admin/users/:userId/login-history", verifyAdmin, async (req, res) => {
     try {
-        const user = await User.findById(req.params.userId);
+        const user = await User.findByPk(req.params.userId);
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
@@ -423,7 +424,7 @@ router.get("/admin/users/:userId/login-history", verifyAdmin, async (req, res) =
 // Delete User (Admin Only)
 router.delete("/admin/users/:userId", verifyAdmin, async (req, res) => {
     try {
-        const user = await User.findByIdAndDelete(req.params.userId);
+        const user = await User.destroy({ where: { _id: req.params.userId } });
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
@@ -438,10 +439,12 @@ router.delete("/admin/users/:userId", verifyAdmin, async (req, res) => {
 // Deactivate User (Admin Only)
 router.patch("/admin/users/:userId/deactivate", verifyAdmin, async (req, res) => {
     try {
-        const user = await User.findByIdAndUpdate(
-            req.params.userId,
-            { isActive: false },
-            { new: true }
+        const [updatedRows, [user]] = await User.update(
+            { isActive: 0 },
+            { 
+                where: { _id: req.params.userId },
+                returning: true 
+            }
         );
 
         if (!user) {
@@ -494,7 +497,9 @@ router.get("/admin/user-data", verifyAdmin, async (req, res) => {
         const limit = parseInt(req.query.limit) || 50;
         const skipCount = (page - 1) * limit;
 
-        const allUserData = await UserData.find();
+        const allUserData = await UserData.findAll({
+            order: [['timestamp', 'DESC']]
+        });
         const totalRecords = allUserData.length;
         const totalPages = Math.ceil(totalRecords / limit);
 
@@ -518,9 +523,10 @@ router.get("/admin/user-data", verifyAdmin, async (req, res) => {
 // Get User Data by Category (Admin Only)
 router.get("/admin/user-data/category/:category", verifyAdmin, async (req, res) => {
     try {
-        const userDataCollection = await UserData.find({ dataCategory: req.params.category })
-            .populate('userId', 'name email')
-            .sort({ timestamp: -1 });
+        const userDataCollection = await UserData.findAll({ 
+            where: { dataCategory: req.params.category },
+            order: [['timestamp', 'DESC']]
+        });
 
         res.json(userDataCollection);
     } catch (error) {
@@ -531,8 +537,10 @@ router.get("/admin/user-data/category/:category", verifyAdmin, async (req, res) 
 // Get User Data for Specific User (Admin Only)
 router.get("/admin/user-data/user/:userId", verifyAdmin, async (req, res) => {
     try {
-        const userDataCollection = await UserData.find({ userId: req.params.userId })
-            .sort({ timestamp: -1 });
+        const userDataCollection = await UserData.findAll({ 
+            where: { userId: req.params.userId },
+            order: [['timestamp', 'DESC']]
+        });
 
         const totalActivities = userDataCollection.length;
         const activityBreakdown = {};
@@ -555,7 +563,7 @@ router.get("/admin/user-data/user/:userId", verifyAdmin, async (req, res) => {
 // Get User Data Analytics Summary (Admin Only)
 router.get("/admin/user-data/analytics/summary", verifyAdmin, async (req, res) => {
     try {
-        const allData = await UserData.find();
+        const allData = await UserData.findAll();
         const totalDataPoints = allData.length;
         
         // Unique Users
@@ -607,7 +615,7 @@ router.get("/admin/user-data/analytics/summary", verifyAdmin, async (req, res) =
 // Delete User Data Records (Admin Only)
 router.delete("/admin/user-data/:dataId", verifyAdmin, async (req, res) => {
     try {
-        const deletedData = await UserData.findByIdAndDelete(req.params.dataId);
+        const deletedData = await UserData.destroy({ where: { _id: req.params.dataId } });
 
         if (!deletedData) {
             return res.status(404).json({ message: "User data record not found" });
@@ -622,9 +630,7 @@ router.delete("/admin/user-data/:dataId", verifyAdmin, async (req, res) => {
 // Export User Data as CSV (Admin Only)
 router.get("/admin/user-data/export/csv", verifyAdmin, async (req, res) => {
     try {
-        const userDataCollection = await UserData.find()
-            .populate('userId', 'name email')
-            .lean();
+        const userDataCollection = await UserData.findAll();
 
         // Convert to CSV format
         const csv = "UserName,Email,ActivityType,Category,Timestamp,Duration,Status\n" +

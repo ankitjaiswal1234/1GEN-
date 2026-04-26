@@ -1,13 +1,23 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../database');
 
-const friendSchema = new mongoose.Schema({
-    _id: { type: String, default: () => 'req_' + Date.now() },
-    requesterId: { type: String, required: true },
-    recipientId: { type: String, required: true },
-    status: { type: String, default: 'pending', enum: ['pending', 'accepted', 'declined'] },
-    createdAt: { type: Date, default: Date.now }
+const Friend = sequelize.define('Friend', {
+    _id: {
+        type: DataTypes.STRING,
+        primaryKey: true,
+        defaultValue: () => 'req_' + Date.now()
+    },
+    requesterId: { type: DataTypes.STRING, allowNull: false },
+    recipientId: { type: DataTypes.STRING, allowNull: false },
+    status: { 
+        type: DataTypes.STRING, 
+        defaultValue: 'pending',
+        validate: {
+            isIn: [['pending', 'accepted', 'declined']]
+        }
+    }
+}, {
+    timestamps: true
 });
-
-const Friend = mongoose.model('Friend', friendSchema);
 
 module.exports = Friend;

@@ -1,39 +1,41 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../database');
 
-const userSchema = new mongoose.Schema({
-    _id: { type: String, default: () => 'u_' + Date.now() + Math.random().toString(36).substr(2, 5) },
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    password: { type: String, required: true },
-    interests: { type: [String], default: [] },
-    loginCount: { type: Number, default: 0 },
-    lastLogin: { type: Date },
-    loginSessions: [{
-        timestamp: { type: Date, default: Date.now },
-        ipAddress: String,
-        country: String,
-        duration: { type: Number, default: 0 }
-    }],
-    createdAt: { type: Date, default: Date.now },
-    isActive: { type: Number, default: 1 },
-    country: { type: String, default: 'Unknown' },
-    ipAddress: { type: String, default: '' },
-    emailVerified: { type: Number, default: 0 },
-    stars_total: { type: Number, default: 0 },
-    stars_count: { type: Number, default: 0 },
-    hearts_count: { type: Number, default: 0 }
+const User = sequelize.define('User', {
+    _id: {
+        type: DataTypes.STRING,
+        primaryKey: true,
+        defaultValue: () => 'u_' + Date.now() + Math.random().toString(36).substr(2, 5)
+    },
+    name: { type: DataTypes.STRING, allowNull: false },
+    email: { type: DataTypes.STRING, unique: true, allowNull: false },
+    password: { type: DataTypes.STRING, allowNull: false },
+    interests: { 
+        type: DataTypes.JSONB, 
+        defaultValue: [] 
+    },
+    country: DataTypes.STRING,
+    avatar: DataTypes.STRING,
+    isActive: { type: DataTypes.INTEGER, defaultValue: 1 },
+    isVerified: { type: DataTypes.INTEGER, defaultValue: 0 },
+    loginCount: { type: DataTypes.INTEGER, defaultValue: 0 },
+    lastLogin: DataTypes.DATE,
+    ipAddress: DataTypes.STRING,
+    loginSessions: { 
+        type: DataTypes.JSONB, 
+        defaultValue: [] 
+    }
 }, {
-    timestamps: false // We use our own createdAt
+    timestamps: true
 });
 
-// Add findWithFilter static
-userSchema.statics.findWithFilter = function(filter) {
-    return this.find(filter);
+// Static methods for backward compatibility
+User.findByEmail = function(email) {
+    return this.findOne({ where: { email: email.toLowerCase() } });
 };
 
-// Add findById helper if needed (Mongoose already has it, but just in case)
-// userSchema.statics.findById = function(id) { ... } // Mongoose already has this
-
-const User = mongoose.model('User', userSchema);
+User.findWithFilter = function(filter) {
+    return this.findAll({ where: filter });
+};
 
 module.exports = User;

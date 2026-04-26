@@ -1,14 +1,13 @@
-const mongoose = require('mongoose');
-const Admin = require('./models/Admin');
 const database = require('./database');
+const Admin = require('./models/Admin');
 
 async function checkAdmins() {
     try {
-        console.log('🔍 Checking MongoDB for admin records...');
+        console.log('🔍 Checking PostgreSQL for admin records...');
         
         await database.waitForReady();
         
-        const admins = await Admin.find();
+        const admins = await Admin.findAll();
         
         if (admins && admins.length > 0) {
             console.log(`\n✓ ${admins.length} Admin Record(s) Found:\n`);
