@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Call – 1GEN CHAT BY AI</title>
+    <title>Video Call – 1GEN CHAT WITH AI</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -63,6 +63,15 @@
             font-weight: 800;
             font-size: 16px;
             color: var(--accent2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-brand span {
+            background: linear-gradient(135deg, var(--accent2) 0%, #fff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .nav-room {
@@ -1356,7 +1365,7 @@
 
     <!-- Top Nav -->
     <div class="top-nav">
-        <div class="nav-brand">1GEN · CALL</div>
+        <div class="nav-brand"><span>1GEN</span> CHAT WITH AI</div>
         <div class="nav-room" id="roomIdDisplay">Room: —</div>
         <div class="nav-timer" id="callTimer">00:00</div>
     </div>
@@ -1435,8 +1444,35 @@
                     <span>Translation Off</span>
                 </div>
 
-                <div>
-                    <div class="lang-section-label">Your Language</div>
+                <div class="lang-section">
+                    <div class="lang-section-label">I am speaking</div>
+                    <p style="font-size:12px;color:var(--muted);margin:4px 0 10px;">Select your native language:</p>
+                    <div class="lang-select-wrap">
+                        <select class="lang-select" id="sourceLangSelect">
+                            <option value="en-US">🇺🇸 English</option>
+                            <option value="hi-IN">🇮🇳 Hindi</option>
+                            <option value="es-ES">🇪🇸 Spanish</option>
+                            <option value="fr-FR">🇫🇷 French</option>
+                            <option value="de-DE">🇩🇪 German</option>
+                            <option value="pt-BR">🇧🇷 Portuguese</option>
+                            <option value="ru-RU">🇷🇺 Russian</option>
+                            <option value="zh-CN">🇨🇳 Chinese</option>
+                            <option value="ja-JP">🇯🇵 Japanese</option>
+                            <option value="ko-KR">🇰🇷 Korean</option>
+                            <option value="ar-SA">🇸🇦 Arabic</option>
+                            <option value="it-IT">🇮🇹 Italian</option>
+                            <option value="tr-TR">🇹🇷 Turkish</option>
+                            <option value="nl-NL">🇳🇱 Dutch</option>
+                            <option value="th-TH">🇹🇭 Thai</option>
+                            <option value="vi-VN">🇻🇳 Vietnamese</option>
+                            <option value="id-ID">🇮🇩 Indonesian</option>
+                        </select>
+                        <span class="lang-select-arrow"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                </div>
+
+                <div class="lang-section">
+                    <div class="lang-section-label">Translate into</div>
                     <p style="font-size:12px;color:var(--muted);margin:4px 0 10px;">Translate everything into:</p>
                     <div class="lang-select-wrap">
                         <select class="lang-select" id="targetLangSelect">
@@ -2630,12 +2666,27 @@
         let subtitleClearTimeout = null;
         let partnerSubClearTimeout = null;
         let translationCache = {};
+        let voices = [];
+        
+        // Ensure voices are loaded
+        const loadVoices = () => {
+            voices = speechSynthesis.getVoices();
+        };
+        loadVoices();
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = loadVoices;
+        }
 
         // Load saved preferences
         const savedLang = localStorage.getItem('translateLang');
         if (savedLang) {
             const sel = document.getElementById('targetLangSelect');
             if (sel) sel.value = savedLang;
+        }
+        const savedSource = localStorage.getItem('sourceLang');
+        if (savedSource) {
+            const sel = document.getElementById('sourceLangSelect');
+            if (sel) sel.value = savedSource;
         }
 
         // Check browser support
@@ -2707,12 +2758,12 @@
 
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = langCode || 'en';
-            utterance.rate = 0.95;
+            utterance.rate = 1.0;
             utterance.pitch = 1;
             utterance.volume = 1;
 
             // Try to find a matching voice for the language
-            const voices = speechSynthesis.getVoices();
+            if (voices.length === 0) voices = speechSynthesis.getVoices();
             const langPrefix = (langCode || 'en').split('-')[0].toLowerCase();
             const matchingVoice = voices.find(v => v.lang.toLowerCase().startsWith(langPrefix));
             if (matchingVoice) utterance.voice = matchingVoice;
@@ -2753,13 +2804,16 @@
             recognition.continuous = true;
             recognition.interimResults = true;
 
-            // Auto-detect language or use a broad setting
-            recognition.lang = ''; // empty = auto-detect on Chrome
+            // Use the user-selected speaking language
+            recognition.lang = document.getElementById('sourceLangSelect').value || 'en-US';
 
             recognition.onstart = () => {
                 isListening = true;
                 document.getElementById('subtitleListening').classList.add('visible');
             };
+
+            let lastProcessedTime = 0;
+            let lastPartialText = '';
 
             recognition.onresult = (event) => {
                 let interim = '';
@@ -2774,16 +2828,25 @@
                     }
                 }
 
-                // Use a debounce-like behavior for interim text to prevent flickering
+                // Immediate visual feedback for the user
                 if (interim) {
                     showSubtitle(interim, null, true);
+                    
+                    // LATEST ENHANCEMENT: Partial Translation
+                    // If interim is long (e.g. > 40 chars) and hasn't been sent, or enough time passed
+                    const now = Date.now();
+                    const cleanInterim = interim.trim();
+                    if (cleanInterim.length > 35 && cleanInterim !== lastPartialText && (now - lastProcessedTime > 2000)) {
+                        lastPartialText = cleanInterim;
+                        lastProcessedTime = now;
+                        processTranslation(cleanInterim, true); // true = isPartial
+                    }
                 }
 
-                // Process final text for translation with a slight delay if rapid
+                // Process final text immediately
                 if (final.trim()) {
-                    const textToTranslate = final.trim();
-                    // Optional: could add some local sanity checks here
-                    processTranslation(textToTranslate);
+                    lastPartialText = '';
+                    processTranslation(final.trim(), false);
                 }
             };
 
@@ -2830,17 +2893,22 @@
         }
 
         // ===== TRANSLATION =====
-        async function processTranslation(text) {
+        async function processTranslation(text, isPartial = false) {
+            if (!text || text.length < 2) return;
             const targetLang = document.getElementById('targetLangSelect').value;
+            const sourceLangFull = document.getElementById('sourceLangSelect').value;
+            const sourceLang = sourceLangFull.split('-')[0];
 
-            // Detect source language using a small heuristic + API
+            // Avoid re-translating same thing too quickly
+            if (isPartial && translationCache[text + '|' + targetLang]) return;
+
             try {
-                const translated = await translateText(text, 'autodetect', targetLang);
+                const translated = await translateText(text, sourceLang, targetLang);
                 if (translated) {
-                    showSubtitle(text, translated.translatedText, false, translated.detectedLang);
+                    showSubtitle(text, translated.translatedText, isPartial, translated.detectedLang);
 
-                    // Speak the translation aloud
-                    if (translated.translatedText && translated.translatedText !== text) {
+                    // Speak the translation ONLY for final results or long enough partials
+                    if (!isPartial && translated.translatedText && translated.translatedText !== text) {
                         speakText(translated.translatedText, targetLang);
                     }
 
@@ -2853,15 +2921,15 @@
                                 translated: translated.translatedText,
                                 fromLang: translated.detectedLang,
                                 toLang: targetLang,
-                                senderName: user.name || 'Partner'
+                                senderName: user.name || 'Partner',
+                                isPartial: isPartial
                             }
                         });
                     }
                 }
             } catch (err) {
                 console.error('Translation error:', err);
-                // Still show original text
-                showSubtitle(text, text, false);
+                if (!isPartial) showSubtitle(text, text, false);
             }
         }
 
@@ -2964,16 +3032,20 @@
             const myTargetLang = document.getElementById('targetLangSelect').value;
             if (caption.toLang === myTargetLang) {
                 text.textContent = caption.translated;
-                // Speak partner's translated words
-                if (speakPartner && speakPartner.checked) {
+                text.style.opacity = caption.isPartial ? '0.7' : '1';
+                
+                // Speak partner's translated words (only if final)
+                if (!caption.isPartial && speakPartner && speakPartner.checked) {
                     speakText(caption.translated, myTargetLang);
                 }
             } else {
                 // Re-translate to our language
                 translateText(caption.original, 'autodetect', myTargetLang).then(result => {
                     text.textContent = result.translatedText;
-                    // Speak partner's translated words
-                    if (speakPartner && speakPartner.checked) {
+                    text.style.opacity = caption.isPartial ? '0.7' : '1';
+                    
+                    // Speak partner's translated words (only if final)
+                    if (!caption.isPartial && speakPartner && speakPartner.checked) {
                         speakText(result.translatedText, myTargetLang);
                     }
                 }).catch(() => {
@@ -2997,6 +3069,15 @@
             localStorage.setItem('translateLang', e.target.value);
             if (captionsEnabled) {
                 showNotif('🌐 Now translating to ' + (LANG_NAMES[e.target.value] || e.target.value));
+            }
+        });
+        document.getElementById('sourceLangSelect').addEventListener('change', (e) => {
+            localStorage.setItem('sourceLang', e.target.value);
+            if (captionsEnabled) {
+                // Restart recognition to apply new language
+                stopSpeechRecognition();
+                setTimeout(() => startSpeechRecognition(), 100);
+                showNotif('🎤 Recognition set to ' + (LANG_NAMES[e.target.value.split('-')[0]] || e.target.value));
             }
         });
     </script>
