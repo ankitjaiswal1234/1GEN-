@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Direct Login Test
- * Tests registration and login without OTP complexity
+ * Direct Login Test (MongoDB version)
+ * Tests registration and login with the new MongoDB/Mongoose setup
  */
 
 const db = require('./database');
@@ -11,22 +11,23 @@ const bcrypt = require('bcryptjs');
 
 async function testLoginFlow() {
     console.log(`\n╔════════════════════════════════════════════════════╗`);
-    console.log(`║   DIRECT LOGIN TEST (Database Level)             ║`);
+    console.log(`║   MONGODB LOGIN TEST (Mongoose Level)            ║`);
     console.log(`╚════════════════════════════════════════════════════╝\n`);
 
     try {
-        // Wait for database to initialize
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('⏳ Waiting for MongoDB connection...');
+        await db.waitForReady();
+        console.log('✓ MongoDB is ready\n');
 
         // Create test user
-        const testEmail = `direct-test-${Date.now()}@test.com`;
+        const testEmail = `mongo-test-${Date.now()}@test.com`;
         const testPassword = 'TestPassword123!';
         
         console.log('📝 Creating test user directly...');
         // Hash password before saving
         const hashedPassword = await bcrypt.hash(testPassword, 10);
         const user = await User.create({
-            name: 'Direct Test User',
+            name: 'Mongo Test User',
             email: testEmail,
             password: hashedPassword,
             interests: ['movie'],
@@ -68,7 +69,9 @@ async function testLoginFlow() {
         foundUser.lastLogin = new Date();
         foundUser.ipAddress = '192.168.1.1';
         foundUser.country = 'Test Country (TC)';
-        foundUser.loginSessions = foundUser.loginSessions || [];
+        
+        // Mongoose handle arrays differently, ensure it's initialized
+        if (!foundUser.loginSessions) foundUser.loginSessions = [];
         foundUser.loginSessions.push({
             timestamp: new Date(),
             ipAddress: '192.168.1.1',
@@ -91,19 +94,8 @@ async function testLoginFlow() {
         console.log(`   Sessions: ${updatedUser.loginSessions.length}\n`);
 
         console.log(`╔════════════════════════════════════════════════════╗`);
-        console.log(`║   ✅ ALL TESTS PASSED SUCCESSFULLY!              ║`);
+        console.log(`║   ✅ ALL MONGODB TESTS PASSED SUCCESSFULLY!       ║`);
         console.log(`╚════════════════════════════════════════════════════╝\n`);
-
-        console.log(`📊 RESULTS:
-   ✅ User Creation: SUCCESS
-   ✅ User Lookup: SUCCESS
-   ✅ Password Hashing: SUCCESS
-   ✅ Password Verification: SUCCESS
-   ✅ Session Tracking: SUCCESS
-   ✅ Country Storage: SUCCESS
-   ✅ Database Schema: COMPATIBLE\n`);
-
-        console.log(`✨ Login functionality is WORKING CORRECTLY!\n`);
 
         process.exit(0);
 

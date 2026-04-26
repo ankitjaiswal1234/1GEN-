@@ -1932,31 +1932,32 @@
             processingCtx.save();
             processingCtx.clearRect(0, 0, w, h);
             
-            // 1. Draw your custom background (Blur or Image)
+            // 1. Draw the segmentation mask first
+            processingCtx.drawImage(results.segmentationMask, 0, 0, w, h);
+            
+            // 2. Draw the sharp person image ONLY where the mask is (person area)
+            processingCtx.globalCompositeOperation = 'source-in';
+            processingCtx.drawImage(results.image, 0, 0, w, h);
+            
+            // 3. Draw the background effect BEHIND the person
+            processingCtx.globalCompositeOperation = 'destination-over';
+            
             if (currentEffect === 'blur') {
+                // For blur, we draw a blurred version of the original image
                 processingCtx.filter = 'blur(15px)';
                 processingCtx.drawImage(results.image, 0, 0, w, h);
                 processingCtx.filter = 'none';
             } else if (bgImages[currentEffect]) {
+                // For virtual backgrounds, draw the selected image
                 processingCtx.drawImage(bgImages[currentEffect], 0, 0, w, h);
+            } else {
+                // Fallback to original image if something goes wrong
+                processingCtx.drawImage(results.image, 0, 0, w, h);
             }
-
-            // 2. Clear out the background where the person is (using the segmentation mask)
-            processingCtx.globalCompositeOperation = 'destination-in';
-            processingCtx.drawImage(results.segmentationMask, 0, 0, w, h);
-
-            // 3. Draw the original person atop the new background
-            // We use destination-over so the result.image (person) is drawn "behind" the mask (which currently contains the background)
-            // Wait, standard way:
-            // - Draw BG
-            // - Draw Mask with source-in (keeps only BG where person is NOT) -> NO.
-            // Simplified logic:
-            processingCtx.globalCompositeOperation = 'destination-over';
-            processingCtx.drawImage(results.image, 0, 0, w, h);
             
             processingCtx.restore();
 
-            // DOUBLE BUFFERING: Copy finished frame to display canvas in one atomic operation
+            // Atomic copy to display canvas
             displayCtx.drawImage(processingCanvas, 0, 0);
         }
 

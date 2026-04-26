@@ -22,6 +22,8 @@ const database = require("./database")
 // Load models (now using SQLite)
 const User = require("./models/User")
 const OTP = require("./models/OTP")
+const Message = require("./models/Message")
+const Friend = require("./models/Friend")
 const { sendOTPEmail, sendWelcomeEmail } = require("./utils/emailService")
 
 const app = express()
@@ -327,10 +329,10 @@ app.get("/api/history", async (req, res) => {
         const userId = req.headers['user-id']; 
         if (!userId || userId.startsWith('guest-')) return res.status(401).json({message: "Unauthorized or guest"});
 
-        const messages = await database.all(
-            `SELECT * FROM messages WHERE senderId = ? OR receiverId = ? ORDER BY timestamp DESC LIMIT 200`,
-            [userId, userId]
-        );
+        const messages = await Message.find({
+            $or: [{ senderId: userId }, { receiverId: userId }]
+        }).sort({ timestamp: -1 }).limit(200);
+        
         res.json(messages);
     } catch(err) {
         res.status(500).json({message: "Error fetching history"});
@@ -480,11 +482,13 @@ async function startServer() {
                     if (otherSocket && Array.from(otherSocket.rooms).includes(room)) {
                         const receiverSession = userSessions[key];
                         if (receiverSession && receiverSession.userId && !receiverSession.userId.startsWith('guest-')) {
-                            const msgId = 'msg_' + Date.now() + Math.random().toString(36).substr(2, 5);
-                            await database.run(
-                                'INSERT INTO messages (_id, senderId, senderName, receiverId, receiverName, text) VALUES (?, ?, ?, ?, ?, ?)',
-                                [msgId, senderSession.userId, data.sender || senderSession.user.name, receiverSession.userId, receiverSession.user.name, data.text]
-                            );
+                            await Message.create({
+                                senderId: senderSession.userId,
+                                senderName: data.sender || senderSession.user.name,
+                                receiverId: receiverSession.userId,
+                                receiverName: receiverSession.user.name,
+                                text: data.text
+                            });
                         }
                     }
                 }
@@ -499,11 +503,11 @@ async function startServer() {
                 const sender = userSessions[socket.id];
                 if (!sender || !sender.userId) return;
 
-                const requestId = 'req_' + Date.now();
-                await database.run(
-                    'INSERT INTO friends (_id, requesterId, recipientId, status) VALUES (?, ?, ?, ?)',
-                    [requestId, sender.userId, toUserId, 'pending']
-                );
+                await Friend.create({
+                    requesterId: sender.userId,
+                    recipientId: toUserId,
+                    status: 'pending'
+                });
 
                 // Notify target if online
                 for (let sid in userSessions) {
@@ -522,9 +526,9 @@ async function startServer() {
                 const recipient = userSessions[socket.id];
                 if (!recipient || !recipient.userId) return;
 
-                await database.run(
-                    'UPDATE friends SET status = ? WHERE requesterId = ? AND recipientId = ?',
-                    ['accepted', fromUserId, recipient.userId]
+                await Friend.findOneAndUpdate(
+                    { requesterId: fromUserId, recipientId: recipient.userId },
+                    { status: 'accepted' }
                 );
 
                 // Notify requester if online
@@ -544,19 +548,26 @@ async function startServer() {
                 const session = userSessions[socket.id];
                 if (!session || !session.userId) return;
 
-                const sql = `
-                    SELECT u._id, u.name, u.interests, u.country, u.avatar 
-                    FROM users u
-                    JOIN friends f ON (f.requesterId = u._id OR f.recipientId = u._id)
-                    WHERE (f.requesterId = ? OR f.recipientId = ?) 
-                    AND f.status = 'accepted'
-                    AND u._id != ?
-                `;
-                const friends = await database.all(sql, [session.userId, session.userId, session.userId]);
+                const friendships = await Friend.find({
+                    $or: [
+                        { requesterId: session.userId, status: 'accepted' },
+                        { recipientId: session.userId, status: 'accepted' }
+                    ]
+                });
+
+                const friendIds = friendships.map(f => 
+                    f.requesterId === session.userId ? f.recipientId : f.requesterId
+                );
+
+                const friends = await User.find({ _id: { $in: friendIds } });
                 const onlineUserIds = Object.values(userSessions).map(s => s.userId);
+                
                 const list = friends.map(f => ({
-                    ...f,
-                    interests: JSON.parse(f.interests || '[]'),
+                    _id: f._id,
+                    name: f.name,
+                    interests: f.interests,
+                    country: f.country,
+                    avatar: f.avatar || null,
                     isOnline: onlineUserIds.includes(f._id)
                 }));
                 socket.emit("friend-list", list);
@@ -570,13 +581,24 @@ async function startServer() {
                 const session = userSessions[socket.id];
                 if (!session || !session.userId) return;
 
-                const sql = `
-                    SELECT f._id as requestId, u._id as userId, u.name, u.avatar, u.country
-                    FROM friends f
-                    JOIN users u ON f.requesterId = u._id
-                    WHERE f.recipientId = ? AND f.status = 'pending'
-                `;
-                const pending = await database.all(sql, [session.userId]);
+                const pendingFriends = await Friend.find({ 
+                    recipientId: session.userId, 
+                    status: 'pending' 
+                });
+                
+                const requesterIds = pendingFriends.map(f => f.requesterId);
+                const requesters = await User.find({ _id: { $in: requesterIds } });
+
+                const pending = pendingFriends.map(f => {
+                    const user = requesters.find(u => u._id === f.requesterId);
+                    return {
+                        requestId: f._id,
+                        userId: f.requesterId,
+                        name: user ? user.name : 'Unknown',
+                        avatar: user ? user.avatar : null,
+                        country: user ? user.country : 'Unknown'
+                    };
+                });
                 socket.emit("pending-requests", pending);
             } catch (err) {
                 console.error("Get pending requests error:", err);
@@ -587,10 +609,11 @@ async function startServer() {
             try {
                 const session = userSessions[socket.id];
                 if (!session || !session.userId) return;
-                await database.run(
-                    'DELETE FROM friends WHERE requesterId = ? AND recipientId = ? AND status = ?',
-                    [fromUserId, session.userId, 'pending']
-                );
+                await Friend.deleteOne({ 
+                    requesterId: fromUserId, 
+                    recipientId: session.userId, 
+                    status: 'pending' 
+                });
             } catch (err) {
                 console.error("Friend decline error:", err);
             }
@@ -601,26 +624,36 @@ async function startServer() {
                 const session = userSessions[socket.id];
                 if (!session || !session.userId) return;
 
-                const sql = `
-                    WITH ChatPartners AS (
-                        SELECT 
-                            CASE WHEN senderId = ? THEN receiverId ELSE senderId END as partnerId,
-                            MAX(timestamp) as lastMsgTime
-                        FROM messages
-                        WHERE senderId = ? OR receiverId = ?
-                        GROUP BY partnerId
-                    )
-                    SELECT cp.partnerId as _id, u.name, u.avatar, u.country, cp.lastMsgTime,
-                    (SELECT text FROM messages WHERE (senderId = ? AND receiverId = u._id) OR (senderId = u._id AND receiverId = ?) ORDER BY timestamp DESC LIMIT 1) as lastMsg
-                    FROM ChatPartners cp
-                    JOIN users u ON cp.partnerId = u._id
-                    ORDER BY cp.lastMsgTime DESC
-                    LIMIT 20
-                `;
-                const chats = await database.all(sql, [
-                    session.userId, session.userId, session.userId,
-                    session.userId, session.userId
-                ]);
+                // Find all messages involving the user
+                const recentMessages = await Message.find({
+                    $or: [{ senderId: session.userId }, { receiverId: session.userId }]
+                }).sort({ timestamp: -1 });
+
+                // Group by partner
+                const partnerMap = new Map();
+                for (const msg of recentMessages) {
+                    const partnerId = msg.senderId === session.userId ? msg.receiverId : msg.senderId;
+                    if (!partnerMap.has(partnerId)) {
+                        partnerMap.set(partnerId, {
+                            lastMsgTime: msg.timestamp,
+                            lastMsg: msg.text
+                        });
+                    }
+                    if (partnerMap.size >= 20) break;
+                }
+
+                const partnerIds = Array.from(partnerMap.keys());
+                const users = await User.find({ _id: { $in: partnerIds } });
+
+                const chats = users.map(u => ({
+                    _id: u._id,
+                    name: u.name,
+                    avatar: u.avatar || null,
+                    country: u.country || 'Unknown',
+                    lastMsgTime: partnerMap.get(u._id).lastMsgTime,
+                    lastMsg: partnerMap.get(u._id).lastMsg
+                })).sort((a, b) => new Date(b.lastMsgTime) - new Date(a.lastMsgTime));
+
                 socket.emit("recent-chats", chats);
             } catch (err) {
                 console.error("Get recent chats error:", err);
@@ -631,13 +664,14 @@ async function startServer() {
             try {
                 const session = userSessions[socket.id];
                 if (!session || !session.userId) return;
-                const sql = `
-                    SELECT * FROM messages 
-                    WHERE (senderId = ? AND receiverId = ?) 
-                    OR (senderId = ? AND receiverId = ?)
-                    ORDER BY timestamp ASC
-                `;
-                const messages = await database.all(sql, [session.userId, withUserId, withUserId, session.userId]);
+                
+                const messages = await Message.find({
+                    $or: [
+                        { senderId: session.userId, receiverId: withUserId },
+                        { senderId: withUserId, receiverId: session.userId }
+                    ]
+                }).sort({ timestamp: 1 });
+                
                 socket.emit("chat-history", { withUserId, messages });
             } catch (err) {
                 console.error("Get chat history error:", err);
@@ -650,11 +684,13 @@ async function startServer() {
                 if (!sender || !sender.userId) return;
 
                 // Save to DB
-                const msgId = 'msg_' + Date.now();
-                await database.run(
-                    'INSERT INTO messages (_id, senderId, senderName, receiverId, receiverName, text) VALUES (?, ?, ?, ?, ?, ?)',
-                    [msgId, sender.userId, sender.user.name, toUserId, 'Friend', text]
-                );
+                await Message.create({
+                    senderId: sender.userId,
+                    senderName: sender.user.name,
+                    receiverId: toUserId,
+                    receiverName: 'Friend',
+                    text: text
+                });
 
                 // Relay to target if online
                 for (let sid in userSessions) {

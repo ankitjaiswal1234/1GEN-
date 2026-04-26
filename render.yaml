@@ -11,9 +11,11 @@ services:
       - key: PORT
         value: 3000
       - key: JWT_SECRET
-        generateValue: true
+        sync: false
       - key: ADMIN_JWT_SECRET
-        generateValue: true
+        sync: false
+      - key: MONGODB_URI
+        sync: false
       - key: EMAIL_USER
         sync: false
       - key: EMAIL_PASSWORD
@@ -24,8 +26,6 @@ services:
         value: "true"
       - key: CORS_ORIGIN
         value: "*"
-      - key: DATABASE_PATH
-        value: "./data/1gen-chat-by-ai.db"
       - key: JWT_EXPIRY
         value: "7d"
       - key: BCRYPT_ROUNDS
