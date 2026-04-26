@@ -536,7 +536,6 @@
             margin-top: 10px;
         }
     </style>
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 
 <body>
@@ -578,12 +577,6 @@
                 </select>
             </div>
 
-            <div class="captcha-container" style="display: none;">
-                <div class="g-recaptcha" 
-                    data-sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI" 
-                    data-callback="onCaptchaVerified"
-                    data-size="invisible"></div>
-            </div>
 
             <button type="submit" class="register-btn-main">📝 Register & Send OTP</button>
 
@@ -658,14 +651,8 @@
             }
         });
 
-        // Global callback for invisible recaptcha
-        function onCaptchaVerified(token) {
-            // Re-trigger the sendOTP execution after captcha check
-            const event = { preventDefault: () => {} };
-            sendOTP(event, true);
-        }
 
-        async function sendOTP(event, isCaptchaDone = false) {
+        async function sendOTP(event) {
             if (event) event.preventDefault();
 
             const errorMsg = document.getElementById("errorMessage");
@@ -678,39 +665,33 @@
             successMsg.style.display = "none";
 
             // Validate inputs
-            if (!document.getElementById("name").value || !document.getElementById("email").value ||
-                !document.getElementById("password").value || !document.getElementById("interests").value) {
+            const name = document.getElementById("name").value;
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const interests = document.getElementById("interests").value;
+
+            if (!name || !email || !password || !interests) {
                 errorMsg.textContent = "❌ Please fill in all fields";
                 errorMsg.style.display = "block";
                 return;
             }
 
-            // Trigger reCAPTCHA if not done
-            if (!isCaptchaDone) {
-                grecaptcha.execute();
-                return;
-            }
-
             // Store registration data
-            registrationData = {
-                name: document.getElementById("name").value,
-                email: document.getElementById("email").value,
-                password: document.getElementById("password").value,
-                interests: document.getElementById("interests").value
-            };
+            registrationData = { name, email, password, interests };
 
             // Show loading state
             loadingDiv.style.display = "block";
             registerBtn.disabled = true;
 
             try {
+                console.log("📨 Sending OTP request...");
                 let res = await fetch("/send-otp", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        email: registrationData.email
-                    })
+                    body: JSON.stringify({ email: registrationData.email })
                 });
+
+                const data = await res.json();
 
                 if (res.ok) {
                     successMsg.textContent = "✅ OTP sent to your email!";
@@ -726,27 +707,21 @@
                     startOTPTimer();
                     document.getElementById("otp1").focus();
 
-                    // Reset recaptcha for later
-                    grecaptcha.reset();
-
                     // Clear messages after 2 seconds
                     setTimeout(() => {
                         successMsg.style.display = "none";
                     }, 2000);
                 } else {
-                    const data = await res.json();
                     errorMsg.textContent = "❌ " + (data.message || "Failed to send OTP. Please try again.");
                     errorMsg.style.display = "block";
                     loadingDiv.style.display = "none";
                     registerBtn.disabled = false;
-                    grecaptcha.reset();
                 }
             } catch (error) {
-                errorMsg.textContent = "❌ An error occurred. Please try again.";
+                errorMsg.textContent = "❌ Network error. Please check your internet or if the server is running.";
                 errorMsg.style.display = "block";
                 loadingDiv.style.display = "none";
                 registerBtn.disabled = false;
-                grecaptcha.reset();
                 console.error("OTP sending error:", error);
             }
         }
