@@ -36,7 +36,7 @@ router.post("/register-admin", async (req, res) => {
         const { name, email, password } = req.body;
 
         // Check if admin already exists
-        const existingAdmin = await Admin.findOne({ email });
+        const existingAdmin = await Admin.findOne({ where: { email } });
         if (existingAdmin) {
             return res.status(400).json({ message: "Admin already exists" });
         }
@@ -61,7 +61,7 @@ router.post("/admin-login", async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const admin = await Admin.findOne({ email });
+        const admin = await Admin.findOne({ where: { email } });
         if (!admin) {
             return res.status(400).json({ message: "Admin not found" });
         }

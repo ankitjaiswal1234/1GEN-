@@ -16,6 +16,16 @@ const OTP = sequelize.define('OTP', {
 });
 
 // Static methods for backward compatibility
+OTP.createOTP = async function(email) {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    
+    return this.create({
+        email: email.toLowerCase(),
+        code,
+        expiresAt
+    });
+};
 OTP.verify = async function(email, code) {
     const otp = await this.findOne({ 
         where: {

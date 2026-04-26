@@ -116,13 +116,13 @@ app.post("/send-otp", async (req,res)=>{
         const normalizedEmail = email.trim().toLowerCase();
         
         // Check if user already exists
-        const existingUser = await User.findOne({email: normalizedEmail})
+        const existingUser = await User.findOne({ where: { email: normalizedEmail } })
         if (existingUser) {
-            return res.status(400).json({message:"Email already registered"})
+            return res.status(400).json({ message: "Email already registered" })
         }
         
         // Generate and send OTP
-        const otpData = await OTP.create(normalizedEmail)
+        const otpData = await OTP.createOTP(normalizedEmail)
         
         // Send OTP email
         console.log(`📧 Attempting to send OTP to: ${normalizedEmail}`);
@@ -178,8 +178,8 @@ app.post("/register", async (req,res)=>{
         const normalizedEmail = email.trim().toLowerCase();
 
         // Final check if user exists
-        const existingUser = await User.findOne({email: normalizedEmail})
-        if(existingUser) return res.status(400).json({message:"User already exists"})
+        const existingUser = await User.findOne({ where: { email: normalizedEmail } })
+        if(existingUser) return res.status(400).json({ message: "User already exists" })
 
         const hash = await bcrypt.hash(password, 10)
         
@@ -223,7 +223,7 @@ app.post("/resend-otp", async (req,res)=>{
         }
         
         // Generate new OTP
-        const otpData = await OTP.create(email)
+        const otpData = await OTP.createOTP(email)
         
         // Send OTP email
         await sendOTPEmail(email, otpData.code)
@@ -242,7 +242,7 @@ const email = req.body.email ? req.body.email.trim().toLowerCase() : '';
 const password = req.body.password;
 
 try {
-const user = await User.findOne({email})
+const user = await User.findOne({ where: { email } })
 
 if(!user) return res.status(400).json({message:"User not found"})
 
