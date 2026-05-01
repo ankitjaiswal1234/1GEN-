@@ -25,7 +25,8 @@ const User = require("./models/User")
 const OTP = require("./models/OTP")
 const Message = require("./models/Message")
 const Friend = require("./models/Friend")
-const { sendOTPEmail, sendWelcomeEmail } = require("./utils/emailService")
+const crypto = require("crypto")
+const { sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail } = require("./utils/emailService")
 
 const app = express()
 app.set('trust proxy', 1); // Trust Render's proxy for getting correct client IP
@@ -305,9 +306,74 @@ res.json({
 })
 } catch(error) {
 console.error("Login error:", error);
-res.status(500).json({message:"Server error during login"})
-}
+    res.status(500).json({message:"Server error during login"})
+    }
 })
+
+// Forgot Password - Generate and send reset link
+app.post("/forgot-password", async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ message: "Email is required" });
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const user = await User.findOne({ where: { email: normalizedEmail } });
+
+        if (!user) {
+            // For security, don't reveal if user exists
+            return res.json({ message: "If an account exists with this email, a reset link has been sent." });
+        }
+
+        // Generate token
+        const token = crypto.randomBytes(32).toString("hex");
+        const expiry = new Date(Date.now() + 3600000); // 1 hour
+
+        user.resetToken = token;
+        user.resetTokenExpiry = expiry;
+        await user.save();
+
+        // Send email
+        await sendPasswordResetEmail(normalizedEmail, token);
+
+        res.json({ message: "If an account exists with this email, a reset link has been sent." });
+    } catch (error) {
+        console.error("Forgot password error:", error);
+        res.status(500).json({ message: "Error processing request" });
+    }
+});
+
+// Reset Password - Verify token and update password
+app.post("/reset-password", async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        if (!token || !newPassword) {
+            return res.status(400).json({ message: "Token and new password are required" });
+        }
+
+        const user = await User.findOne({
+            where: {
+                resetToken: token,
+                resetTokenExpiry: { [Op.gt]: new Date() }
+            }
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: "Invalid or expired reset token" });
+        }
+
+        // Hash new password
+        const hash = await bcrypt.hash(newPassword, 10);
+        user.password = hash;
+        user.resetToken = null;
+        user.resetTokenExpiry = null;
+        await user.save();
+
+        res.json({ message: "Password updated successfully", success: true });
+    } catch (error) {
+        console.error("Reset password error:", error);
+        res.status(500).json({ message: "Error resetting password" });
+    }
+});
 
 // Get all users API (for admin dashboard)
 app.get("/api/users", async (req, res) => {

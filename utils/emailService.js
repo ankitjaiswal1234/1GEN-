@@ -228,8 +228,72 @@ const sendWelcomeEmail = async (email, name) => {
     return sendEmail(email, '🎉 Welcome to 1GEN CHAT BY AI!', htmlContent, textContent);
 };
 
+// Send Password Reset Email
+const sendPasswordResetEmail = async (email, token) => {
+    const resetUrl = `${getBaseUrl()}/reset-password.html?token=${token}`;
+    
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+                .container { max-width: 500px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden; }
+                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
+                .content { padding: 30px; }
+                .button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; border-radius: 5px; text-decoration: none; margin: 20px 0; }
+                .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 0.9em; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎥 1GEN CHAT BY AI</h1>
+                    <p>Password Reset</p>
+                </div>
+                <div class="content">
+                    <h2>Reset Your Password</h2>
+                    <p>We received a request to reset your password. Click the button below to set a new password:</p>
+                    
+                    <p style="text-align: center;">
+                        <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; border-radius: 5px; text-decoration: none; margin: 20px 0;">
+                            Reset Password
+                        </a>
+                    </p>
+                    
+                    <p style="color: #666; font-size: 0.9em;">
+                        This link will expire in 1 hour. If you didn't request a password reset, please ignore this email.
+                    </p>
+                </div>
+                <div class="footer">
+                    <p>For security, never share your reset link with anyone.</p>
+                    <p>&copy; 2026 1GEN CHAT BY AI. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+
+    const textContent = `
+    🎥 1GEN CHAT BY AI - Password Reset
+
+    Reset Your Password
+
+    We received a request to reset your password. Use the link below to set a new password:
+
+    ${resetUrl}
+
+    This link will expire in 1 hour. If you didn't request a password reset, please ignore this email.
+
+    © 2026 1GEN CHAT BY AI. All rights reserved.
+    `;
+
+    return sendEmail(email, '🔐 Reset Your Password - 1GEN CHAT BY AI', htmlContent, textContent);
+};
+
 module.exports = {
     sendOTPEmail,
     sendWelcomeEmail,
+    sendPasswordResetEmail,
     sendEmail
 };

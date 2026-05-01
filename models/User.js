@@ -24,6 +24,14 @@ const User = sequelize.define('User', {
     loginSessions: { 
         type: DataTypes.JSONB, 
         defaultValue: [] 
+    },
+    resetToken: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    resetTokenExpiry: {
+        type: DataTypes.DATE,
+        allowNull: true
     }
 }, {
     timestamps: true

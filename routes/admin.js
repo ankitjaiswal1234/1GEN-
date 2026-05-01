@@ -150,7 +150,7 @@ router.get("/admin/dashboard-stats", verifyAdmin, async (req, res) => {
         const totalUsers = users.length;
         const activeUsersCount = users.filter(u => u.isActive === 1).length;
         const inactiveUsersCount = totalUsers - activeUsersCount;
-        
+
         // Calculate interest breakdown
         const interestCounts = {
             movie: 0,
@@ -170,12 +170,12 @@ router.get("/admin/dashboard-stats", verifyAdmin, async (req, res) => {
         });
 
         // Calculate total sessions
-        const totalLoginSessions = users.reduce((sum, user) => 
+        const totalLoginSessions = users.reduce((sum, user) =>
             sum + (user.loginSessions ? user.loginSessions.length : 0), 0);
-        
+
         // Calculate average session duration
         const avgSessionDuration = users.length > 0
-            ? Math.round(users.reduce((sum, user) => 
+            ? Math.round(users.reduce((sum, user) =>
                 sum + (user.loginSessions ? user.loginSessions.reduce((s, session) => s + (session.duration || 0), 0) : 0), 0) / (totalLoginSessions || 1))
             : 0;
 
@@ -218,7 +218,7 @@ router.get("/admin/dashboard-stats", verifyAdmin, async (req, res) => {
 router.get("/admin/country-stats", verifyAdmin, async (req, res) => {
     try {
         const users = await User.findAll();
-        
+
         const countryStats = {};
         let totalSessions = 0;
         let totalActiveUsers = 0;
@@ -242,7 +242,7 @@ router.get("/admin/country-stats", verifyAdmin, async (req, res) => {
 
             countryStats[country].userCount++;
             countryStats[country].totalSessions += sessions;
-            
+
             if (isActive) {
                 countryStats[country].activeUsers++;
                 totalActiveUsers++;
@@ -377,7 +377,7 @@ router.get("/admin/statistics", verifyAdmin, async (req, res) => {
 
         const totalLoginSessions = users.reduce((sum, user) => sum + (user.loginSessions ? user.loginSessions.length : 0), 0);
         const avgSessionDuration = users.length > 0
-            ? Math.round(users.reduce((sum, user) => 
+            ? Math.round(users.reduce((sum, user) =>
                 sum + (user.loginSessions ? user.loginSessions.reduce((s, session) => s + (session.duration || 0), 0) : 0), 0) / (totalLoginSessions || 1))
             : 0;
 
@@ -441,9 +441,9 @@ router.patch("/admin/users/:userId/deactivate", verifyAdmin, async (req, res) =>
     try {
         const [updatedRows, [user]] = await User.update(
             { isActive: 0 },
-            { 
+            {
                 where: { _id: req.params.userId },
-                returning: true 
+                returning: true
             }
         );
 
@@ -523,7 +523,7 @@ router.get("/admin/user-data", verifyAdmin, async (req, res) => {
 // Get User Data by Category (Admin Only)
 router.get("/admin/user-data/category/:category", verifyAdmin, async (req, res) => {
     try {
-        const userDataCollection = await UserData.findAll({ 
+        const userDataCollection = await UserData.findAll({
             where: { dataCategory: req.params.category },
             order: [['timestamp', 'DESC']]
         });
@@ -537,7 +537,7 @@ router.get("/admin/user-data/category/:category", verifyAdmin, async (req, res) 
 // Get User Data for Specific User (Admin Only)
 router.get("/admin/user-data/user/:userId", verifyAdmin, async (req, res) => {
     try {
-        const userDataCollection = await UserData.findAll({ 
+        const userDataCollection = await UserData.findAll({
             where: { userId: req.params.userId },
             order: [['timestamp', 'DESC']]
         });
@@ -565,7 +565,7 @@ router.get("/admin/user-data/analytics/summary", verifyAdmin, async (req, res) =
     try {
         const allData = await UserData.findAll();
         const totalDataPoints = allData.length;
-        
+
         // Unique Users
         const uniqueUserIds = new Set(allData.map(d => d.userId));
         const activityTypes = Array.from(new Set(allData.map(d => d.activityType)));
@@ -634,7 +634,7 @@ router.get("/admin/user-data/export/csv", verifyAdmin, async (req, res) => {
 
         // Convert to CSV format
         const csv = "UserName,Email,ActivityType,Category,Timestamp,Duration,Status\n" +
-            userDataCollection.map(record => 
+            userDataCollection.map(record =>
                 `"${record.userName}","${record.userEmail}","${record.activityType}","${record.dataCategory}","${record.timestamp}","${record.duration || 'N/A'}","${record.status || 'N/A'}"`
             ).join("\n");
 

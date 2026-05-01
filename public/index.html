@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1GEN CHAT BY AI | The Future of Connection</title>
+    <title>1GEN CHAT WITH AI | The Future of Connection</title>
     <meta name="description"
         content="1GEN CHAT BY AI - Experience the next generation of real-time video communication with AI-powered matching.">
     <link rel="stylesheet" href="landing.css">
@@ -58,7 +58,7 @@
                         Video Communication</span>
                     <h1>The Future of <span>Human Connection</span></h1>
                 </div>
-                <p class="reveal">Join 1GEN CHAT BY AI and experience crystal-clear HD video, ultra-low latency
+                <p class="reveal">Join 1GEN CHAT WITH AI and experience crystal-clear HD video, ultra-low latency
                     matching, and global interaction. Powered by advanced WebRTC technology.</p>
                 <div class="hero-cta reveal">
                     <a href="register.html" class="btn btn-primary">Get Started Free</a>
@@ -176,7 +176,7 @@
         <div class="container">
             <div class="footer-content">
                 <a href="/" class="logo">
-                    🤖 <span>1GEN CHAT BY AI</span>
+                    🤖 <span>1GEN CHAT WITH AI</span>
                 </a>
                 <div class="nav-links" style="display: flex;">
                     <a href="#">Privacy</a>
@@ -185,7 +185,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>© 2026 1GEN CHAT BY AI. All rights reserved.</p>
+                <p>© 2026 1GEN CHAT WITH AI. All rights reserved.</p>
                 <p>Designed for Excellence.</p>
             </div>
         </div>
@@ -226,10 +226,10 @@
                     const user = JSON.parse(userStr);
                     const navBtns = document.querySelector('.nav-btns');
                     const mobileNav = document.getElementById('mobileNav');
-                    
+
                     const dashboardBtn = `<a href="dashboard.html" class="btn btn-primary">Dashboard (Welcome, ${user.name.split(' ')[0]})</a>`;
                     const logoutBtn = `<a href="#" onclick="logout(); return false;" class="btn btn-outline" style="margin-left: 10px;">Logout</a>`;
-                    
+
                     if (navBtns) navBtns.innerHTML = dashboardBtn + logoutBtn;
                     if (mobileNav) {
                         mobileNav.innerHTML = `
@@ -239,11 +239,11 @@
                             <a href="#" onclick="logout(); return false;">Logout</a>
                         `;
                     }
-                    
+
                     // Update Hero CTA
                     const heroCta = document.querySelector('.hero-cta');
                     if (heroCta) {
-                       heroCta.innerHTML = `<a href="dashboard.html" class="btn btn-primary">Go to Dashboard</a><a href="#features" class="btn btn-outline">Explore Features</a>`;
+                        heroCta.innerHTML = `<a href="dashboard.html" class="btn btn-primary">Go to Dashboard</a><a href="#features" class="btn btn-outline">Explore Features</a>`;
                     }
                     const ctaSection = document.querySelector('.cta-section .cta-card');
                     if (ctaSection) {

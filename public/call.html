@@ -1754,8 +1754,8 @@
         rawVideo.style.position = 'fixed';
         rawVideo.style.top = '-9999px';
         rawVideo.style.left = '-9999px';
-        rawVideo.style.width = '640px';
-        rawVideo.style.height = '480px';
+        rawVideo.style.width = '1280px';
+        rawVideo.style.height = '720px';
         rawVideo.style.opacity = '1';
         rawVideo.style.pointerEvents = 'none';
         window.addEventListener('DOMContentLoaded', () => {
@@ -1831,7 +1831,19 @@
         // Initialize camera
         async function init() {
             try {
-                currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                currentStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280, min: 640 },
+                        height: { ideal: 720, min: 480 },
+                        frameRate: { ideal: 30, min: 15 }
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 48000
+                    }
+                });
                 rawVideo.srcObject = currentStream;
                 rawVideo.play().catch(e => console.warn('raw video play err:', e));
                 document.getElementById('myVideo').srcObject = currentStream;
@@ -2004,6 +2016,29 @@
             });
         }
 
+        // Set HD video bitrate on WebRTC senders for better quality
+        async function setHDBitrate(pc) {
+            try {
+                for (const sender of pc.getSenders()) {
+                    const params = sender.getParameters();
+                    if (!params.encodings || params.encodings.length === 0) {
+                        params.encodings = [{}];
+                    }
+                    if (sender.track && sender.track.kind === 'video') {
+                        params.encodings[0].maxBitrate = 2500000; // 2.5 Mbps
+                        params.encodings[0].maxFramerate = 30;
+                        params.encodings[0].scaleResolutionDownBy = 1.0; // No downscale
+                    } else if (sender.track && sender.track.kind === 'audio') {
+                        params.encodings[0].maxBitrate = 128000; // 128 kbps
+                    }
+                    await sender.setParameters(params);
+                }
+                console.log('✅ HD bitrate configured');
+            } catch (e) {
+                console.warn('Bitrate config skipped:', e.message);
+            }
+        }
+
         init();
 
         async function processEarlyCandidates(socketId, pc) {
@@ -2169,6 +2204,10 @@
 
             pc.onconnectionstatechange = () => {
                 updateConnectionIndicator();
+                // Set HD bitrate when connected
+                if (pc.connectionState === 'connected') {
+                    setHDBitrate(pc);
+                }
             };
 
             return pc;
@@ -2750,47 +2789,59 @@
         }
 
         // ===== TEXT-TO-SPEECH =====
+        let ttsQueue = [];
+        let isTTSPlaying = false;
+
         function speakText(text, langCode) {
             if (!speakEnabled || !text || !text.trim()) return;
 
-            // Stop any current speech
-            speechSynthesis.cancel();
+            // Queue TTS to avoid overlapping
+            ttsQueue.push({ text, langCode });
+            if (!isTTSPlaying) processNextTTS();
+        }
 
+        function processNextTTS() {
+            if (ttsQueue.length === 0) { isTTSPlaying = false; return; }
+            isTTSPlaying = true;
+            const { text, langCode } = ttsQueue.shift();
+
+            speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = langCode || 'en';
-            utterance.rate = 1.0;
+            utterance.rate = 1.05;
             utterance.pitch = 1;
-            utterance.volume = 1;
+            utterance.volume = 0.85;
 
-            // Try to find a matching voice for the language
+            // Find matching voice
             if (voices.length === 0) voices = speechSynthesis.getVoices();
             const langPrefix = (langCode || 'en').split('-')[0].toLowerCase();
             const matchingVoice = voices.find(v => v.lang.toLowerCase().startsWith(langPrefix));
             if (matchingVoice) utterance.voice = matchingVoice;
 
-            // Pause recognition while speaking to avoid feedback loop
+            // Mute mic to prevent feedback loop instead of stopping recognition
             utterance.onstart = () => {
                 isSpeaking = true;
-                if (recognition && isListening) {
-                    try { recognition.stop(); } catch (e) { }
+                if (currentStream) {
+                    currentStream.getAudioTracks().forEach(t => t.enabled = false);
                 }
             };
 
             utterance.onend = () => {
                 isSpeaking = false;
-                // Resume recognition after speaking
-                if (captionsEnabled && !isListening) {
-                    setTimeout(() => {
-                        if (captionsEnabled && !isSpeaking) startSpeechRecognition();
-                    }, 400);
+                // Unmute mic after TTS finishes
+                if (currentStream && !isMuted) {
+                    currentStream.getAudioTracks().forEach(t => t.enabled = true);
                 }
+                // Process next queued TTS
+                processNextTTS();
             };
 
             utterance.onerror = () => {
                 isSpeaking = false;
-                if (captionsEnabled && !isListening) {
-                    setTimeout(() => startSpeechRecognition(), 400);
+                if (currentStream && !isMuted) {
+                    currentStream.getAudioTracks().forEach(t => t.enabled = true);
                 }
+                processNextTTS();
             };
 
             speechSynthesis.speak(utterance);
@@ -2833,10 +2884,12 @@
                     showSubtitle(interim, null, true);
                     
                     // LATEST ENHANCEMENT: Partial Translation
-                    // If interim is long (e.g. > 40 chars) and hasn't been sent, or enough time passed
+                    // Translate interim if it has enough content and time has passed
                     const now = Date.now();
                     const cleanInterim = interim.trim();
-                    if (cleanInterim.length > 35 && cleanInterim !== lastPartialText && (now - lastProcessedTime > 2000)) {
+                    const wordCount = cleanInterim.split(/\\s+/).length;
+                    
+                    if (cleanInterim !== lastPartialText && (wordCount >= 3 || cleanInterim.length > 15) && (now - lastProcessedTime > 1500)) {
                         lastPartialText = cleanInterim;
                         lastProcessedTime = now;
                         processTranslation(cleanInterim, true); // true = isPartial
@@ -2860,19 +2913,17 @@
                 } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
                     // Auto-restart on transient errors
                     setTimeout(() => {
-                        if (captionsEnabled) startSpeechRecognition();
-                    }, 1000);
+                        if (captionsEnabled && !isListening) startSpeechRecognition();
+                    }, 100);
                 }
             };
 
             recognition.onend = () => {
                 isListening = false;
                 document.getElementById('subtitleListening').classList.remove('visible');
-                // Auto-restart if still enabled
+                // Auto-restart immediately if still enabled to prevent missed speech
                 if (captionsEnabled) {
-                    setTimeout(() => {
-                        if (captionsEnabled) startSpeechRecognition();
-                    }, 300);
+                    startSpeechRecognition();
                 }
             };
 
