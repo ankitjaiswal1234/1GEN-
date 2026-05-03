@@ -198,9 +198,17 @@ app.post("/register", async (req,res)=>{
         // Send welcome email
         await sendWelcomeEmail(email, name)
         
+        // Generate token for auto-login
+        const token = jwt.sign(
+            { id: user._id, email: user.email },
+            JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRY || "7d" }
+        )
+
         res.json({
             message:"Account created successfully",
             success:true,
+            token,
             user:{
                 _id:user._id,
                 name:user.name,
@@ -378,12 +386,13 @@ app.post("/reset-password", async (req, res) => {
 // Get all users API (for admin dashboard)
 app.get("/api/users", async (req, res) => {
 try {
-const users = await User.find();
+const users = await User.findAll();
 // Remove passwords
-const usersWithoutPassword = users.map(u => ({
-...u,
-password: undefined
-}));
+const usersWithoutPassword = users.map(u => {
+    const userPlain = u.get({ plain: true });
+    delete userPlain.password;
+    return userPlain;
+});
 res.json(usersWithoutPassword);
 } catch (error) {
 res.status(500).json({ message: "Error fetching users" });
@@ -597,9 +606,9 @@ async function startServer() {
                 const recipient = userSessions[socket.id];
                 if (!recipient || !recipient.userId) return;
 
-                await Friend.findOneAndUpdate(
-                    { requesterId: fromUserId, recipientId: recipient.userId },
-                    { status: 'accepted' }
+                await Friend.update(
+                    { status: 'accepted' },
+                    { where: { requesterId: fromUserId, recipientId: recipient.userId } }
                 );
 
                 // Notify requester if online
@@ -692,10 +701,12 @@ async function startServer() {
             try {
                 const session = userSessions[socket.id];
                 if (!session || !session.userId) return;
-                await Friend.deleteOne({ 
-                    requesterId: fromUserId, 
-                    recipientId: session.userId, 
-                    status: 'pending' 
+                await Friend.destroy({ 
+                    where: {
+                        requesterId: fromUserId, 
+                        recipientId: session.userId, 
+                        status: 'pending' 
+                    }
                 });
             } catch (err) {
                 console.error("Friend decline error:", err);
@@ -837,7 +848,7 @@ async function startServer() {
 
         socket.on("rate-user", async ({ targetUserId, stars, liked }) => {
             try {
-                const target = await User.findById(targetUserId);
+                const target = await User.findByPk(targetUserId);
                 if (!target) return;
 
                 target.stars_total = (target.stars_total || 0) + (stars || 0);

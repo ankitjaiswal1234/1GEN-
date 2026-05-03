@@ -59,7 +59,12 @@ router.post("/register-admin", async (req, res) => {
 // Admin Login
 router.post("/admin-login", async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const email = req.body.email ? req.body.email.trim().toLowerCase() : '';
+        const { password } = req.body;
+        
+        console.log("Login attempt for email:", email);
+        const allAdmins = await Admin.findAll();
+        console.log("Available admins in DB:", allAdmins.map(a => a.email));
 
         const admin = await Admin.findOne({ where: { email } });
         if (!admin) {

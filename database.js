@@ -20,10 +20,11 @@ if (DATABASE_URL) {
         logging: false
     });
 } else {
-    console.log('💾 DATABASE_URL not found. Falling back to local SQLite for development...');
+    const dbPath = process.env.DATABASE_PATH ? path.resolve(__dirname, process.env.DATABASE_PATH) : path.join(__dirname, 'data', 'video-platform.db');
+    console.log(`💾 DATABASE_URL not found. Falling back to local SQLite: ${dbPath}`);
     sequelize = new Sequelize({
         dialect: 'sqlite',
-        storage: path.join(__dirname, 'data', 'video-platform.db'),
+        storage: dbPath,
         logging: false
     });
 }
