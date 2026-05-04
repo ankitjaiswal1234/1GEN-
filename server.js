@@ -12,7 +12,7 @@ const path = require("path")
 
 // Configuration from environment
 const PORT = process.env.PORT || 3000
-const JWT_SECRET = process.env.JWT_SECRET || "change-me-in-production"
+const JWT_SECRET = process.env.JWT_SECRET || "6e1623b870a12aab1d83ea9bea4e95e5357c477fda40375bdcf140dd5e31054f"
 const NODE_ENV = process.env.NODE_ENV || "development"
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "*"
 
@@ -33,7 +33,7 @@ app.set('trust proxy', 1); // Trust Render's proxy for getting correct client IP
 const server = http.createServer(app)
 const io = socketio(server, {
     cors: {
-        origin: CORS_ORIGIN,
+        origin: CORS_ORIGIN === "*" ? true : CORS_ORIGIN, // true allows the request origin, which is required when credentials: true
         methods: ["GET", "POST"],
         credentials: true
     }
@@ -79,10 +79,15 @@ function findBestMatch(skipperSocketId, skipperInterests) {
 // Global user directory for interest lookup
 const lobbyUsers = {};
 
-// Create logs directory if it doesn't exist
+// Create required directories if they don't exist
 const logsDir = path.join(__dirname, "logs")
 if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir, { recursive: true })
+}
+
+const dataDir = path.join(__dirname, "data")
+if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true })
 }
 
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -915,8 +920,19 @@ async function startServer() {
 
     });
 
-    server.listen(PORT, () => {
-        console.log(`Server running on http://localhost:${PORT}`)
+    server.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 Server successfully started!`)
+        console.log(`🔗 Local Access: http://localhost:${PORT}`)
+        if (process.env.RENDER_EXTERNAL_URL) {
+            console.log(`🔗 Live Access: ${process.env.RENDER_EXTERNAL_URL}`)
+        }
+    }).on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.error(`❌ Port ${PORT} is already in use. Please stop the other process or use a different port.`);
+        } else {
+            console.error('❌ Server failed to start:', err);
+        }
+        process.exit(1);
     });
 }
 
