@@ -19,9 +19,7 @@ const isRender = process.env.RENDER === 'true' || !!process.env.RENDER_EXTERNAL_
 
 // SMTP configuration
 const smtpConfig = {
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: isRender ? 587 : (parseInt(process.env.EMAIL_PORT) || 587),
-    secure: isRender ? false : (process.env.EMAIL_SECURE === 'true'),
+    service: 'gmail', // Using the built-in service helper for Gmail
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD
@@ -33,8 +31,7 @@ const smtpConfig = {
     connectionTimeout: 30000,
     greetingTimeout: 30000,
     socketTimeout: 30000,
-    dnsTimeout: 15000,
-    family: 4 // Force IPv4
+    dnsTimeout: 15000
 };
 
 // Lazy transporter initialization to support test account when credentials are missing
