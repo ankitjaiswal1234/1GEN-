@@ -97,7 +97,7 @@ console.log(`✓ Data location: data/1gen-chat-by-ai.db`);
 app.get("/health", (req, res) => {
     res.json({
         status: "alive",
-        database: database.isReady() ? "ready" : "initializing",
+        database: database.isReady ? "ready" : "initializing",
         time: new Date().toISOString(),
         env: NODE_ENV
     });
@@ -150,10 +150,11 @@ app.post("/verify-otp", async (req,res)=>{
             return res.status(400).json({message:"Email and OTP are required"})
         }
         
-        console.log(`🔍 Verifying OTP for: ${email}`);
+        const normalizedEmail = email.trim().toLowerCase();
+        console.log(`🔍 Verifying OTP for: ${normalizedEmail}`);
         // Verify OTP
-        await OTP.verify(email, otp)
-        console.log(`✓ OTP verified for: ${email}`);
+        await OTP.verify(normalizedEmail, otp)
+        console.log(`✓ OTP verified for: ${normalizedEmail}`);
         
         res.json({
             message:"OTP verified successfully",
@@ -231,11 +232,13 @@ app.post("/resend-otp", async (req,res)=>{
             return res.status(400).json({message:"Email is required"})
         }
         
+        const normalizedEmail = email.trim().toLowerCase();
+        
         // Generate new OTP
-        const otpData = await OTP.createOTP(email)
+        const otpData = await OTP.createOTP(normalizedEmail)
         
         // Send OTP email
-        await sendOTPEmail(email, otpData.code)
+        await sendOTPEmail(normalizedEmail, otpData.code)
         
         res.json({message:"OTP resent to your email", success:true})
     } catch(error) {
@@ -281,8 +284,19 @@ user.country = country;
 user.ipAddress = ipAddress;
 
 // Add login session
-if (!user.loginSessions) user.loginSessions = [];
-user.loginSessions.push({
+let sessions = user.loginSessions;
+if (typeof sessions === 'string') {
+    try {
+        sessions = JSON.parse(sessions);
+    } catch(e) {
+        sessions = [];
+    }
+}
+if (!Array.isArray(sessions)) {
+    sessions = [];
+}
+
+sessions.push({
 timestamp: new Date(),
 ipAddress: ipAddress,
 country: country,
@@ -290,9 +304,12 @@ duration: 0
 });
 
 // Keep only last 50 sessions
-if (user.loginSessions.length > 50) {
-user.loginSessions = user.loginSessions.slice(-50);
+if (sessions.length > 50) {
+sessions = sessions.slice(-50);
 }
+
+user.loginSessions = sessions;
+user.changed('loginSessions', true);
 
 await user.save();
 
@@ -898,7 +915,7 @@ async function startServer() {
     });
 
     server.listen(PORT, () => {
-        console.log(`Server running on ${PORT}`)
+        console.log(`Server running on http://localhost:${PORT}`)
     });
 }
 

@@ -41,13 +41,17 @@ async function fetch(url, options = {}) {
         body: options.body ? JSON.stringify(options.body) : undefined
     });
     
-    if (!response.ok && response.status !== 400 && response.status !== 401) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    let data = null;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+    } else {
+        await response.text(); // Consume the body
     }
     
     return {
         status: response.status,
-        data: await response.json()
+        data: data
     };
 }
 
@@ -58,8 +62,9 @@ async function runTests() {
 
     // Test 1: Server Health Check
     await test('Server is responding', async () => {
-        const res = await fetch(`${BASE_URL}/register.html`);
+        const res = await fetch(`${BASE_URL}/health`);
         if (res.status !== 200) throw new Error('Server not responding');
+        if (res.data.status !== 'alive') throw new Error('Server is not healthy');
     });
 
     // Test 2: Send OTP with invalid email
@@ -150,8 +155,8 @@ async function runTests() {
         try {
             const fs = require('fs');
             const path = require('path');
-            const dbPath = path.join(__dirname, 'data', 'video-platform.db');
-            if (!fs.existsSync(dbPath)) throw new Error('Database file not found');
+            const dbPath = path.join(__dirname, 'data', '1gen-chat-by-ai.db');
+            if (!fs.existsSync(dbPath)) throw new Error(`Database file not found at ${dbPath}`);
         } catch (e) {
             throw e;
         }
