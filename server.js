@@ -86,7 +86,7 @@ if (!fs.existsSync(logsDir)) {
 }
 
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-console.log("🚀 1GEN CHAT BY AI - SERVER INITIALIZATION")
+console.log("🚀 1GEN CHAT WITH AI - SERVER INITIALIZATION")
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 console.log(`📍 Environment: ${NODE_ENV}`)
 console.log(`📍 Port: ${PORT}`)
@@ -124,6 +124,7 @@ app.post("/send-otp", async (req,res)=>{
         
         // Generate and send OTP
         const otpData = await OTP.createOTP(normalizedEmail)
+        console.log('🔑 Generated OTP code for', normalizedEmail, ':', otpData.code);
         
         // Send OTP email
         console.log(`📧 Attempting to send OTP to: ${normalizedEmail}`);

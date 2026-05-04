@@ -2887,9 +2887,9 @@
                     // Translate interim if it has enough content and time has passed
                     const now = Date.now();
                     const cleanInterim = interim.trim();
-                    const wordCount = cleanInterim.split(/\\s+/).length;
+                    const wordCount = cleanInterim.split(/\s+/).length;
                     
-                    if (cleanInterim !== lastPartialText && (wordCount >= 3 || cleanInterim.length > 15) && (now - lastProcessedTime > 1500)) {
+                    if (cleanInterim !== lastPartialText && (wordCount >= 4 || cleanInterim.length > 20) && (now - lastProcessedTime > 2000)) {
                         lastPartialText = cleanInterim;
                         lastProcessedTime = now;
                         processTranslation(cleanInterim, true); // true = isPartial
@@ -2948,7 +2948,8 @@
             if (!text || text.length < 2) return;
             const targetLang = document.getElementById('targetLangSelect').value;
             const sourceLangFull = document.getElementById('sourceLangSelect').value;
-            const sourceLang = sourceLangFull.split('-')[0];
+            const isAutoDetect = document.getElementById('autoDetectToggle') ? document.getElementById('autoDetectToggle').checked : false;
+            const sourceLang = isAutoDetect ? 'autodetect' : sourceLangFull.split('-')[0];
 
             // Avoid re-translating same thing too quickly
             if (isPartial && translationCache[text + '|' + targetLang]) return;
@@ -2990,7 +2991,7 @@
             if (translationCache[cacheKey]) return translationCache[cacheKey];
 
             const langPair = fromLang === 'autodetect' ? `autodetect|${toLang}` : `${fromLang}|${toLang}`;
-            const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`;
+            const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}&de=1gen-chat-ai@example.com`;
 
             const response = await fetch(url);
             const data = await response.json();
@@ -3029,8 +3030,8 @@
             document.getElementById('subtitleListening').classList.remove('visible');
 
             if (isInterim) {
-                // Show interim text with typing indicator style
-                transEl.textContent = originalText + ' ...';
+                // Show interim text - prioritize translated if available, else original
+                transEl.textContent = (translatedText || originalText) + ' ...';
                 transEl.style.opacity = '0.6';
                 origEl.classList.remove('visible');
             } else {
@@ -3090,8 +3091,9 @@
                     speakText(caption.translated, myTargetLang);
                 }
             } else {
-                // Re-translate to our language
-                translateText(caption.original, 'autodetect', myTargetLang).then(result => {
+                // Re-translate to our language using partner's detected language if available
+                const fromLang = caption.fromLang || 'autodetect';
+                translateText(caption.original, fromLang, myTargetLang).then(result => {
                     text.textContent = result.translatedText;
                     text.style.opacity = caption.isPartial ? '0.7' : '1';
                     

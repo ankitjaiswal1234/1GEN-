@@ -13,6 +13,11 @@ if (dns.setDefaultResultOrder) {
 const isRender = process.env.RENDER === 'true' || !!process.env.RENDER_EXTERNAL_URL;
 
 // On Render, we aggressively force Port 587 and IPv4 to avoid common network reachability issues
+
+
+
+
+// SMTP configuration
 const smtpConfig = {
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
     port: isRender ? 587 : (parseInt(process.env.EMAIL_PORT) || 587),
@@ -25,14 +30,36 @@ const smtpConfig = {
         rejectUnauthorized: false,
         minVersion: 'TLSv1.2'
     },
-    connectionTimeout: 30000, 
-    greetingTimeout: 30000, 
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
     socketTimeout: 30000,
     dnsTimeout: 15000,
     family: 4 // Force IPv4
 };
 
-const transporter = nodemailer.createTransport(smtpConfig);
+// Lazy transporter initialization to support test account when credentials are missing
+let transporterInstance = null;
+async function getTransporter() {
+    if (transporterInstance) return transporterInstance;
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+        transporterInstance = nodemailer.createTransport(smtpConfig);
+    } else {
+        console.warn('⚠️ EMAIL credentials not set. Creating Ethereal test account for development.');
+        const testAccount = await nodemailer.createTestAccount();
+        transporterInstance = nodemailer.createTransport({
+            host: testAccount.smtp.host,
+            port: testAccount.smtp.port,
+            secure: testAccount.smtp.secure,
+            auth: {
+                user: testAccount.user,
+                pass: testAccount.pass
+            }
+        });
+        console.log('📧 Ethereal test account created. Preview URL will be logged after sending emails.');
+    }
+    console.log('📧 Email transporter configured:', JSON.stringify(transporterInstance.options || smtpConfig, null, 2));
+    return transporterInstance;
+}
 
 // Get the base URL for emails
 const getBaseUrl = () => {
@@ -43,61 +70,74 @@ const getBaseUrl = () => {
 };
 
 // Verify connection on startup with more detail
-transporter.verify(function(error, success) {
-    if (error) {
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('❌ EMAIL SERVICE CONNECTION FAILED');
-        console.log('Error Code:', error.code || 'N/A');
-        console.log('Error Message:', error.message || 'Unknown error');
-        console.log('Host/Port:', (error.host || process.env.EMAIL_HOST || 'smtp.gmail.com') + ':' + (error.port || process.env.EMAIL_PORT || 465));
-        console.log('NODE_ENV:', process.env.NODE_ENV || 'development');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    } else {
-        console.log('✓ Email Service Connectivity Verified');
-    }
-});
+// Verify connection on startup with more detail using lazy transporter
+(async () => {
+  try {
+    const transporter = await getTransporter();
+    await transporter.verify();
+    console.log('✓ Email Service Connectivity Verified');
+  } catch (error) {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('❌ EMAIL SERVICE CONNECTION FAILED');
+    console.log('Error Code:', error.code || 'N/A');
+    console.log('Error Message:', error.message || 'Unknown error');
+    console.log('Host/Port:', (error.host || process.env.EMAIL_HOST || 'smtp.gmail.com') + ':' + (error.port || process.env.EMAIL_PORT || 465));
+    console.log('NODE_ENV:', process.env.NODE_ENV || 'development');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  }
+})();
+
 
 // Fallback to console logging if email is not configured properly
 const sendEmail = async (to, subject, htmlContent, textContent) => {
-    try {
-        // Check if email credentials are configured
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-            const isProduction = process.env.NODE_ENV === 'production';
-            
-            if (isProduction) {
-                console.error('❌ CRITICAL: Email credentials missing in production environment!');
-                throw new Error('Email service is not configured. Please set EMAIL_USER and EMAIL_PASSWORD environment variables.');
-            }
+    // Check if email credentials are configured
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+        const isProduction = process.env.NODE_ENV === 'production';
 
-            // If not configured in development, log to console
-            console.log('⚠️ Email Service Not Configured! Using Console Log Fallback (Development Mode).');
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('To:', to);
-            console.log('Subject:', subject);
-            console.log('Content Summary:', textContent.substring(0, 100) + '...');
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            return { success: true, devMode: true };
+        if (isProduction) {
+            console.error('❌ CRITICAL: Email credentials missing in production environment!');
+            throw new Error('Email service is not configured. Please set EMAIL_USER and EMAIL_PASSWORD environment variables.');
         }
 
+        // If not configured in development, log to console and continue using test account
+        console.log('⚠️ Email Service Not Configured! Using Ethereal test account (Development Mode).');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('To:', to);
+        console.log('Subject:', subject);
+        console.log('Content Summary:', textContent.substring(0, 100) + '...');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        // Do not return; allow getTransporter to create test account
+    }
+
+    try {
+        // Initialize transporter (real or test)
+        const transporter = await getTransporter();
         const result = await transporter.sendMail({
-            from: process.env.EMAIL_USER,
+            from: process.env.EMAIL_USER || transporter.options.auth.user,
             to,
             subject,
             text: textContent,
             html: htmlContent
         });
-
         console.log('✓ Email sent successfully:', result.messageId);
+        // If using Ethereal, log preview URL
+        if (result.previewUrl) {
+            console.log('📩 Preview URL:', result.previewUrl);
+        }
         return { success: true, messageId: result.messageId };
     } catch (error) {
-        console.error('✗ Error sending email:', error.message);
+        console.error('✗ Error sending email:', error);
+        if (error.response) console.error('SMTP response:', error.response);
+        if (error.stack) console.error('Stack trace:', error.stack);
         const errorDetails = {
             message: error.message,
             code: error.code,
             command: error.command,
             address: error.address,
             port: error.port,
-            host: error.host || process.env.EMAIL_HOST || 'smtp.gmail.com'
+            host: error.host || process.env.EMAIL_HOST || 'smtp.gmail.com',
+            response: error.response,
+            stack: error.stack
         };
         console.error('Error Details:', JSON.stringify(errorDetails, null, 2));
         throw new Error(`Email failed: ${error.message} (${error.code || 'NO_CODE'})`);
@@ -107,7 +147,7 @@ const sendEmail = async (to, subject, htmlContent, textContent) => {
 // Send OTP email
 const sendOTPEmail = async (email, otp) => {
     const expireTime = '10 minutes';
-    
+
     const htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -126,7 +166,7 @@ const sendOTPEmail = async (email, otp) => {
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>🎥 1GEN CHAT BY AI</h1>
+                    <h1>🎥 1GEN CHAT WITH AI</h1>
                     <p>Email Verification</p>
                 </div>
                 <div class="content">
@@ -148,7 +188,7 @@ const sendOTPEmail = async (email, otp) => {
                 </div>
                 <div class="footer">
                     <p><strong>Security Notice:</strong> Never share your OTP with anyone. We will never ask for it.</p>
-                    <p>&copy; 2026 1GEN CHAT BY AI. All rights reserved.</p>
+                    <p>&copy; 2026 1GEN CHAT WITH AI. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -156,7 +196,7 @@ const sendOTPEmail = async (email, otp) => {
     `;
 
     const textContent = `
-    🎥 1GEN CHAT BY AI - Email Verification
+    🎥 1GEN CHAT WITH AI - Email Verification
 
     Verify Your Email Address
 
@@ -168,10 +208,10 @@ const sendOTPEmail = async (email, otp) => {
 
     Security Notice: Never share your OTP with anyone. We will never ask for it.
 
-    © 2026 1GEN CHAT BY AI. All rights reserved.
+    © 2026 1GEN CHAT WITH AI. All rights reserved.
     `;
 
-    return sendEmail(email, '🔐 Verify Your Email - 1GEN CHAT BY AI', htmlContent, textContent);
+    return sendEmail(email, '🔐 Verify Your Email - 1GEN CHAT WITH AI', htmlContent, textContent);
 };
 
 // Send Welcome Email
@@ -192,7 +232,7 @@ const sendWelcomeEmail = async (email, name) => {
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>🎥 1GEN CHAT BY AI</h1>
+                    <h1>🎥 1GEN CHAT WITH AI</h1>
                     <p>Welcome!</p>
                 </div>
                 <div class="content">
@@ -217,7 +257,7 @@ const sendWelcomeEmail = async (email, name) => {
                 </div>
                 <div class="footer">
                     <p>If you have any questions, feel free to reach out to our support team.</p>
-                    <p>&copy; 2026 1GEN CHAT BY AI. All rights reserved.</p>
+                    <p>&copy; 2026 1GEN CHAT WITH AI. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -225,7 +265,7 @@ const sendWelcomeEmail = async (email, name) => {
     `;
 
     const textContent = `
-    🎥 1GEN CHAT BY AI - Welcome
+    🎥 1GEN CHAT WITH AI - Welcome
 
     Welcome, ${name}! 🎉
 
@@ -233,16 +273,16 @@ const sendWelcomeEmail = async (email, name) => {
 
     Visit: ${getBaseUrl()}/login.html
 
-    © 2026 1GEN CHAT BY AI. All rights reserved.
+    © 2026 1GEN CHAT WITH AI. All rights reserved.
     `;
 
-    return sendEmail(email, '🎉 Welcome to 1GEN CHAT BY AI!', htmlContent, textContent);
+    return sendEmail(email, '🎉 Welcome to 1GEN CHAT WITH AI!', htmlContent, textContent);
 };
 
 // Send Password Reset Email
 const sendPasswordResetEmail = async (email, token) => {
     const resetUrl = `${getBaseUrl()}/reset-password.html?token=${token}`;
-    
+
     const htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -259,7 +299,7 @@ const sendPasswordResetEmail = async (email, token) => {
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>🎥 1GEN CHAT BY AI</h1>
+                    <h1>🎥 1GEN CHAT WITH AI</h1>
                     <p>Password Reset</p>
                 </div>
                 <div class="content">
@@ -278,7 +318,7 @@ const sendPasswordResetEmail = async (email, token) => {
                 </div>
                 <div class="footer">
                     <p>For security, never share your reset link with anyone.</p>
-                    <p>&copy; 2026 1GEN CHAT BY AI. All rights reserved.</p>
+                    <p>&copy; 2026 1GEN CHAT WITH AI. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -286,7 +326,7 @@ const sendPasswordResetEmail = async (email, token) => {
     `;
 
     const textContent = `
-    🎥 1GEN CHAT BY AI - Password Reset
+    🎥 1GEN CHAT WITH AI - Password Reset
 
     Reset Your Password
 
@@ -296,10 +336,10 @@ const sendPasswordResetEmail = async (email, token) => {
 
     This link will expire in 1 hour. If you didn't request a password reset, please ignore this email.
 
-    © 2026 1GEN CHAT BY AI. All rights reserved.
+    © 2026 1GEN CHAT WITH AI. All rights reserved.
     `;
 
-    return sendEmail(email, '🔐 Reset Your Password - 1GEN CHAT BY AI', htmlContent, textContent);
+    return sendEmail(email, '🔐 Reset Your Password - 1GEN CHAT WITH AI', htmlContent, textContent);
 };
 
 module.exports = {
