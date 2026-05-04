@@ -20,8 +20,8 @@ const isRender = process.env.RENDER === 'true' || !!process.env.RENDER_EXTERNAL_
 // SMTP configuration
 const smtpConfig = {
     host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // Use STARTTLS
+    port: 465,
+    secure: true, // Use SSL/TLS
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD
@@ -30,10 +30,10 @@ const smtpConfig = {
         rejectUnauthorized: false,
         minVersion: 'TLSv1.2'
     },
-    connectionTimeout: 30000,
-    greetingTimeout: 30000,
-    socketTimeout: 30000,
-    dnsTimeout: 15000
+    connectionTimeout: 60000,
+    greetingTimeout: 60000,
+    socketTimeout: 60000,
+    dnsTimeout: 30000
 };
 
 // Lazy transporter initialization to support test account when credentials are missing
