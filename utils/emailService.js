@@ -1,4 +1,10 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
+
+// Force IPv4 as the first choice for DNS lookups to avoid ENETUNREACH (IPv6) errors on cloud hosts like Render
+if (dns.setDefaultResultOrder) {
+    dns.setDefaultResultOrder('ipv4first');
+}
 
 // Configure your email service here
 // For Gmail, you'll need to use an App Password or enable Less Secure App Access
@@ -6,20 +12,21 @@ const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.EMAIL_PORT) || 465,
-    secure: process.env.EMAIL_SECURE !== 'false', // Default to true for 465
+    port: parseInt(process.env.EMAIL_PORT) || 587, // Use 587 for better compatibility
+    secure: process.env.EMAIL_SECURE === 'true', // Use STARTTLS for 587
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD
     },
     tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: false,
+        minVersion: 'TLSv1.2'
     },
     // Force IPv4 to avoid ENETUNREACH on Render/other IPv6-challenged hosts
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 10000, 
-    socketTimeout: 10000,
-    dnsTimeout: 5000,
+    connectionTimeout: 20000, // Increase timeouts
+    greetingTimeout: 20000, 
+    socketTimeout: 20000,
+    dnsTimeout: 10000,
     family: 4 
 });
 
