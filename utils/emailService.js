@@ -19,7 +19,9 @@ const isRender = process.env.RENDER === 'true' || !!process.env.RENDER_EXTERNAL_
 
 // SMTP configuration
 const smtpConfig = {
-    service: 'gmail', // Using the built-in service helper for Gmail
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // Use STARTTLS
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD
@@ -39,7 +41,13 @@ let transporterInstance = null;
 async function getTransporter() {
     if (transporterInstance) return transporterInstance;
     if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-        transporterInstance = nodemailer.createTransport(smtpConfig);
+        transporterInstance = nodemailer.createTransport({
+            ...smtpConfig,
+            // Force IPv4 for the socket connection
+            lookup: (hostname, options, callback) => {
+                dns.lookup(hostname, { family: 4 }, callback);
+            }
+        });
     } else {
         console.warn('⚠️ EMAIL credentials not set. Creating Ethereal test account for development.');
         const testAccount = await nodemailer.createTestAccount();
